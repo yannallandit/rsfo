@@ -29,11 +29,11 @@ Installation procedure:
 
 2/ configure the ssh for root without password nor passphrase (look at the SSH_setting.txt for more details).
 
-3/ run rsfo_run1_os7up.sh (previously OS7.sh)
+3/ run rsfo_run1_os7up.sh (previously OS7.sh).
 
-4/ run rsfo_run2_cruser.sh
+4/ run rsfo_run2_cruser.sh.
 
-5/ configure manually the shared storage
+5/ configure manually the shared storage.
 
 Scripts:
 --------
