@@ -1,0 +1,34 @@
+#==============================================================================
+#       (c) Copyright 2004 Hewlett-Packard Development Company, L.P.
+#    The information contained herein is subject to change without notice.
+#==============================================================================
+#
+
+This document is a procedure to set the ssh without password or passphrase.
+===========================================================================
+
+1/ From each node (assume there is 2 nodes in the cluster)
+ssh nodename1 date
+ssh nodename2 date
+each time, accept the key and enter the password.
+
+2/ On each node, run
+ssh-keygen -b 1024 -t dsa
+accept the default value. Do not enter any passphrase.
+
+3/ On each node, run
+cd ~/.ssh
+scp id_dsa.pub nodename2:.ssh/id_dsa_username@nodename1.pub
+In this step you will copy the local node key to the remote one. This step has to be performed on both way (node1 -> Node2 and Node2 -> Node1).
+
+4/ On each node run
+cat id_dsa.pub>>authorized_keys
+cat id_dsa_username@nodename1.pub>>authorized_keys
+The local and the remote keys are added in the "authorized_keys" file.
+
+5/ Test the ssh again (has in the step 1). It should work without password nor passphrase.
+
+6/ Test the same with the private name or address. Accept the key.
+After this test the ssh should work through the both channel (private and
+public) with asking password nor passphrase.
+

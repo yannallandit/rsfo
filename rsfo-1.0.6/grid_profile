@@ -1,0 +1,38 @@
+# .bash_profile
+
+# Get the aliases and functions
+if [ -f ~/.bashrc ]; then
+        . ~/.bashrc
+fi
+
+# User specific environment and startup programs
+
+PATH=$PATH:$HOME/bin
+
+export PATH
+
+export ORACLE_HOME ORACLE_BASE
+ORACLE_BASE=/u01/app/grid
+ORACLE_HOME=/u01/app/grid/12c
+
+PATH=$PATH:/usr/bin/X11:$ORACLE_HOME/bin:.
+PATH=$PATH:/bin:/usr/bin:/usr/sbin:/etc:/opt/bin:/usr/ccs/bin:/usr/local/bin:/usr/openwin/bin:/opt/local/GNU/bin:/opt/local/bin:/opt/NSCPnav/bin:/usr/local/samba/bin:/usr/ucb
+PATH=$PATH:$HOME/OPatch
+
+export ORACLE_SID=
+export ORACLE_TERM=xterm
+export ORA_NLS33=$ORACLE_HOME/ocommon/nls/admin/data
+
+export LD_LIBRARY_PATH=$ORACLE_HOME/lib:/lib:/usr/lib:/usr/openwin/lib
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/td/lib:/usr/ucblib:/usr/local/lib:$ORACLE_HOME/lib
+
+export CLASSPATH=$ORACLE_HOME/JRE:$ORACLE_HOME/jlib:$ORACLE_HOME/rdbms/jlib:$ORACLE_HOME/network/jlib
+
+export TMPDIR=/tmp
+export TEMP=/tmp
+
+export NLS_LANG=AMERICAN_AMERICA.US7ASCII
+export LANG=C
+
+umask 022
+
