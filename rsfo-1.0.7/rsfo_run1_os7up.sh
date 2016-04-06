@@ -80,10 +80,7 @@ then
     echo "Check /etc/os-release"
     exit 1
   else
-    echo "This server runs a Red Hat/CentOS 6.x release"
-    echo "This version is not yet supported by RSFO"
     OSversion=RH6
-    exit 1
   fi
 else
   OSversion=RH7  
