@@ -22,3 +22,4 @@ More information in the RSFO_introduction.pdf document.
 - Support of Red Hat EL 6.x
 - Smart shm kernel parameters setting
 - ssh for the grid user
+- A Video tutorial shows the entire process
