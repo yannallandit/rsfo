@@ -16,6 +16,8 @@
 #  04/07/28  Yann Allandit     Nodes list managment update - avoid double input -
 #  04/08/02  Yann Allandit     gcc and g++ release managment updated
 #  16/03/02  Yann Allandit     Port to RHEL/CentOS 7.x
+#  16/04/06  Yann Allandit     Improved memory kernel setting
+#  16/04/06  Yann Allandit     Added support for RHEL/CentOS 6.x
 ###############################################################################
 #!/bin/bash
 #!/usr/bin/perl
@@ -43,6 +45,7 @@ input_nodes=Y		# Boolean for input of nodes name
 rhrelease="empty"	# Collect the version of the OS
 SELinuxSet="empty"	# Current setting of SELinux 
 repolist="empty"	# Check if a YUM repository was defined on the system
+OSversion="empty"	# Check the OS version used for this installation
 
 
 #############################################
@@ -59,12 +62,28 @@ then
 fi
 
 #################### Check the Red Hat release ####################
-rhrelease=`cat /etc/redhat-release |grep Maipo`
+if [ ! -f /etc/os-release ]; then
+  if [ ! -f /etc/redhat-release ]; then
+    echo "Unable to identify the OS release!"
+    echo "check if /etc/os-release exists"
+    exit 1
+  fi
+fi
+
+rhrelease=`cat /etc/os-release |grep Maipo`
 if [ "X${rhrelease}" = "X" ]
 then
-  echo "This server does not run a Red Hat 7.x release"
-  echo "Check /etc/redhat-release"
-  exit 1
+  rhrelease=`cat /etc/os-release |grep Santiago`
+  if [ "X${rhrelease}" = "X" ]
+  then
+    echo "This server does not run a Red Hat/CentOS 6.x or 7.x release"
+    echo "Check /etc/os-release"
+    exit 1
+  else
+    OSversion=RH6
+  fi
+else
+  OSversion=RH7  
 fi
 
 #################### Check if a Yum repository is available #######
@@ -113,7 +132,7 @@ then
   do
     show_name="N${i}"
     eval show_name=\$$show_name
-    echo "Private node ${i} name is ${show_name}."
+    echo "Private node ${i} name is ${show_name}"
   done
 
   echo
@@ -292,10 +311,6 @@ do
 done
 
 ############################################################
-# Install the required packages
-############################################################
-  
-############################################################
 # Set kernel parameters
 ############################################################
  
@@ -319,10 +334,12 @@ do
       kvalue="250 32000 100 128"
       ;;
     kernel.shmall)
-      kvalue=2097152
+      kvalue=`ssh ${show_name} free -k|grep Mem:|awk '{print $2}'`
+      kvalue=`expr ${kvalue} / 5 \* 4`
       ;;
     kernel.shmmax)
-      kvalue=2147483648
+      kvalue=`ssh ${show_name} free -b|grep Mem:|awk '{print $2}'`
+      kvalue=`expr ${kvalue} / 10 \* 7`
       ;;
     kernel.shmmni)
       kvalue=4096
@@ -448,12 +465,25 @@ done
 # Installation of the prerequisites packages
 ###########################################################
 
-for ((i=1; i<=node_number; i++))
-do
-  show_name="N${i}"
-  eval show_name=\$$show_name
-  ssh ${show_name} yum install -y binutils.x86_64 compat-libcap1.x86_64 compat-libstdc++-33.i686 compat-libstdc++-33.x86_64 gcc.x86_64 gcc-c++.x86_64 glibc.i686 glibc.x86_64 glibc-devel.i686 glibc-devel.x86_64 ksh.x86_64 libgcc.i686 libgcc.x86_64 libstdc++.i686 libstdc++.x86_64 libstdc++-devel.i686  libstdc++-devel.x86_64 libaio.i686 libaio.x86_64 libaio-devel.i686 libaio-devel.x86_64 libXext.i686 libXext.x86_64 libXtst.i686 libXtst.x86_64 libX11.i686 libX11.x86_64 libXau.i686 libXau.x86_64 libxcb.i686 libxcb.x86_64 libXi.i686 libXi.x86_64 make.x86_64 sysstat.x86_64 unixODBC-devel.x86_64 unixODBC.x86_64 >/dev/null 2>${file_log}
-  echo "Oracle needed packages were installed on ${show_name}"
-done
+if [ $OSversion = "RH7" ]
+then
+  for ((i=1; i<=node_number; i++))
+  do
+    show_name="N${i}"
+    eval show_name=\$$show_name
+    ssh ${show_name} yum install -y binutils.x86_64 compat-libcap1.x86_64 compat-libstdc++-33.i686 compat-libstdc++-33.x86_64 gcc.x86_64 gcc-c++.x86_64 glibc.i686 glibc.x86_64 glibc-devel.i686 glibc-devel.x86_64 ksh.x86_64 libgcc.i686 libgcc.x86_64 libstdc++.i686 libstdc++.x86_64 libstdc++-devel.i686  libstdc++-devel.x86_64 libaio.i686 libaio.x86_64 libaio-devel.i686 libaio-devel.x86_64 libXext.i686 libXext.x86_64 libXtst.i686 libXtst.x86_64 libX11.i686 libX11.x86_64 libXau.i686 libXau.x86_64 libxcb.i686 libxcb.x86_64 libXi.i686 libXi.x86_64 make.x86_64 sysstat.x86_64 unixODBC-devel.x86_64 unixODBC.x86_64 >/dev/null 2>${file_log}
+    echo "Oracle needed packages were installed on ${show_name}"
+  done
+
+elif [ $OSversion = "RH6" ]
+then
+  for ((i=1; i<=node_number; i++))
+  do
+    show_name="N${i}"
+    eval show_name=\$$show_name
+    ssh ${show_name} yum install -y binutils.x86_64 compat-libcap1.x86_64 compat-libstdc++-33.i686 compat-libstdc++-33.x86_64 gcc.x86_64 gcc-c++.x86_64 glibc.i686 glibc.x86_64 glibc-devel.i686 glibc-devel.x86_64 ksh.x86_64 libgcc.i686 libgcc.x86_64 libstdc++.i686 libstdc++.x86_64 libstdc++-devel.i686  libstdc++-devel.x86_64 libaio.x86_64 libaio-devel.x86_64 libXext.x86_64 libXtst.x86_64 libX11.x86_64 libXau.x86_64 libxcb.x86_64 libXi.x86_64 make.x86_64 sysstat.x86_64 unixODBC-devel.x86_64 unixODBC.x86_64 glibc-devel.x86_64 cpp.x86_64 glibc-headers.x86_64 kernel-headers.x86_64 mpfr.x86_64 redhat-release-server.x86_64 cloog-ppl.x86_64 libstdc++.x86_64 libstdc++-devel.x86_64 ppl.x86_64 >/dev/null 2>${file_log}
+    echo "Oracle needed packages were installed on ${show_name}"
+  done
+fi
 
 

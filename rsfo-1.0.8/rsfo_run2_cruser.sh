@@ -28,6 +28,8 @@
 #  16/03/03  Yann Allandit     Support of 12c on RHEL7 and CentOS7
 #  16/03/03  Yann Allandit     Support of 12 nodes cluster 
 #  16/03/07  Yann Allandit     Include the grid user creation
+#  16/04/06  Yann Allandit     Add ssh setup for the grid user
+#  16/04/12  Yann Allandit     Define "password" as default pwd for oracle & grid users
 ###############################################################################
 #!/bin/bash
 
@@ -137,7 +139,7 @@ then
   do
     show_name="N${i}"
     eval show_name=\$$show_name
-    echo "Private node ${i} name is ${show_name}."
+    echo "Private node ${i} name is ${show_name}"
   done
 
   echo
@@ -628,6 +630,8 @@ do
   ssh ${show_name} /usr/sbin/useradd -G dba,asmdba,asmadmin -g oinstall -p oracle -s /bin/bash -u ${grid_number} grid
   ssh ${show_name} echo "grid:oracle|/usr/sbin/chpasswd"
   echo "grid user added on ${show_name} with uid ${grid_number}. Password is oracle."
+  ssh ${show_name} "echo password | passwd grid --stdin"
+  ssh ${show_name} "echo password | passwd oracle --stdin"
   
   if [[ ! -d /opt/oracle ]]
   then
@@ -649,7 +653,7 @@ done
 
 
 ###############################################################
-# ssh setting for the oracle User
+# ssh setting for the oracle & grid users
 ###############################################################
 
 echo
@@ -665,6 +669,24 @@ do
   eval show_name=\$$show_name
   ssh ${show_name} cp -R /root/.ssh /home/oracle/.ssh
   ssh ${show_name} chown -R oracle:oinstall /home/oracle/.ssh
-  echo "ssh enabled on ${show_name}"
+  echo "ssh enabled for oracle on ${show_name}"
 done 
 echo
+
+echo
+echo "################################################"
+echo " RSFO will now enable ssh for the grid user."
+echo
+
+read -r N1 N2 N3 N4 N5 N6 N7 N8 N9 N10 N11 N12 < $file_nname
+
+for ((i=1; i<=node_number; i++))
+do
+  show_name="N${i}"
+  eval show_name=\$$show_name
+  ssh ${show_name} cp -R /root/.ssh /home/grid/.ssh
+  ssh ${show_name} chown -R grid:oinstall /home/grid/.ssh
+  echo "ssh enabled for grid on ${show_name}"
+done
+echo
+
