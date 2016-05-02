@@ -31,6 +31,7 @@
 #  16/04/06  Yann Allandit     Add ssh setup for the grid user
 #  16/04/12  Yann Allandit     Define "password" as default pwd for oracle & grid users
 #  16/04/27  Yann Allandit     gid management for hugepages setting 
+#  16/05/02  Yann Allandit     Change ORACLE_HOME location question 
 ###############################################################################
 #!/bin/bash
 
@@ -501,7 +502,7 @@ done
 OORABASE=`grep ORACLE_BASE= $ora_profile`
 
 echo "Database \$ORACLE_BASE is ${OORABASE}"
-echo "Do you want to change it (Y/N)?"
+echo "Do you want to keep it like this (Y/N)?"
 read obase_check
 while [ "X${obase_check}" != "XN" ] && [ "X${obase_check}" != "XY" ]
 do
@@ -513,7 +514,7 @@ done
 
 obase_input=N
 
-if [ "X${obase_check}" == "XY" ]
+if [ "X${obase_check}" == "XN" ]
 then
   while [ ${obase_input} == "N" ]
   do
@@ -560,7 +561,7 @@ fi
 OGRIDBASE=`grep ORACLE_BASE= $grid_profile`
 
 echo "Grid \$ORACLE_BASE is ${OGRIDBASE}"
-echo "Do you want to change it (Y/N)?"
+echo "Do you want to keep it like this (Y/N)?"
 read obase_check
 while [ "X${obase_check}" != "XN" ] && [ "X${obase_check}" != "XY" ]
 do
@@ -571,7 +572,7 @@ done
 
 obase_input=N
 
-if [ "X${obase_check}" == "XY" ]
+if [ "X${obase_check}" == "XN" ]
 then
   while [ ${obase_input} == "N" ]
   do

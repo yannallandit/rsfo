@@ -22,6 +22,7 @@ More information in the RSFO_introduction.pdf document.
 - /etc/profile update for Oracle and Grid
 - hugepages setup
 - transparent hugepages disabled
+- change order in answering $H question
 
 ### New in version 1.0.8
 
