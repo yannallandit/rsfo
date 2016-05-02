@@ -18,6 +18,9 @@
 #  16/03/02  Yann Allandit     Port to RHEL/CentOS 7.x
 #  16/04/06  Yann Allandit     Improved memory kernel setting
 #  16/04/06  Yann Allandit     Added support for RHEL/CentOS 6.x
+#  27/04/06  Yann Allandit     Include hugepages setting
+#  27/04/06  Yann Allandit     Update pam.d 
+#  27/04/06  Yann Allandit     Disable transparent hugepages
 ###############################################################################
 #!/bin/bash
 #!/usr/bin/perl
@@ -46,6 +49,7 @@ rhrelease="empty"	# Collect the version of the OS
 SELinuxSet="empty"	# Current setting of SELinux 
 repolist="empty"	# Check if a YUM repository was defined on the system
 OSversion="empty"	# Check the OS version used for this installation
+khugepages=0		# Value for the hugepages setting
 
 
 #############################################
@@ -327,7 +331,7 @@ do
   ssh ${show_name} cp -f /etc/sysctl.conf /etc/sysctl.conf.RSFO
   ssh ${show_name} "echo \"# Update done by RSFO scripts\">>/etc/sysctl.conf"
 
-  for kparam in "kernel.sem" "kernel.shmall" "kernel.shmmax" "kernel.shmmni" "fs.file-max" "net.ipv4.ip_local_port_range" "net.core.rmem_default" "net.core.wmem_default" "net.core.rmem_max" "net.core.wmem_max" "fs.aio-max-nr" "vm.swappiness" "vm.dirty_background_ratio" "vm.dirty_ratio" "vm.dirty_expire_centisecs" "vm.dirty_writeback_centisecs"
+  for kparam in "kernel.sem" "kernel.shmall" "kernel.shmmax" "kernel.shmmni" "fs.file-max" "net.ipv4.ip_local_port_range" "net.core.rmem_default" "net.core.wmem_default" "net.core.rmem_max" "net.core.wmem_max" "fs.aio-max-nr" "vm.swappiness" "vm.dirty_background_ratio" "vm.dirty_ratio" "vm.dirty_expire_centisecs" "vm.dirty_writeback_centisecs" "vm.nr_hugepages" "vm.hugetlb_shm_group"
   do
     case $kparam in
     kernel.sem)
@@ -336,11 +340,18 @@ do
     kernel.shmall)
       kvalue=`ssh ${show_name} free -k|grep Mem:|awk '{print $2}'`
       kvalue=`expr ${kvalue} / 5 \* 4`
+      khugepages=`expr ${kvalue} / 8`
       ;;
     kernel.shmmax)
       kvalue=`ssh ${show_name} free -b|grep Mem:|awk '{print $2}'`
       kvalue=`expr ${kvalue} / 10 \* 7`
       ;;
+    vm.nr_hugepages)
+      kvalue=${khugepages}
+      ;;
+    vm.hugetlb_shm_group)
+      kvalue=501
+      ;; 
     kernel.shmmni)
       kvalue=4096
       ;;
@@ -415,6 +426,18 @@ done
 
 
 ###########################################################
+# Alter SELinux setting
+###########################################################
+for ((i=1; i<=node_number; i++))
+do
+  show_name="N${i}"
+  eval show_name=\$$show_name
+  ssh ${show_name} "echo 'session    required     pam_limits.so' >> /etc/pam.d/login"
+  echo "pam.d updated on ${show_name}"
+done
+
+
+###########################################################
 # Deactivating the firewall
 ###########################################################
 for ((i=1; i<=node_number; i++))
@@ -424,6 +447,21 @@ do
   ssh ${show_name} systemctl stop firewalld >/dev/null 2>${file_log}
   ssh ${show_name} systemctl disable firewalld >/dev/null 2>${file_log}
   echo "firewalld was stopped & disabled on ${show_name}"
+done
+
+
+###########################################################
+# Deactivating the transparent Hugepages
+###########################################################
+for ((i=1; i<=node_number; i++))
+do
+  show_name="N${i}"
+  eval show_name=\$$show_name
+  ssh ${show_name} "echo never > /sys/kernel/mm/transparent_hugepage/enabled"
+  ssh ${show_name} "echo never > /sys/kernel/mm/transparent_hugepage/defrag"
+  ssh ${show_name} "echo 'echo never > /sys/kernel/mm/transparent_hugepage/enabled' >> /etc/rc.d/rc.local"
+  ssh ${show_name} "echo 'echo never > /sys/kernel/mm/transparent_hugepage/defrag' >> /etc/rc.d/rc.local"
+  ssh ${show_name} "chmod u+x /etc/rc.d/rc.local"
 done
 
 

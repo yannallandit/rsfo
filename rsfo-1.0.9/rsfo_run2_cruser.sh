@@ -29,6 +29,8 @@
 #  16/03/03  Yann Allandit     Support of 12 nodes cluster 
 #  16/03/07  Yann Allandit     Include the grid user creation
 #  16/04/06  Yann Allandit     Add ssh setup for the grid user
+#  16/04/12  Yann Allandit     Define "password" as default pwd for oracle & grid users
+#  16/04/27  Yann Allandit     gid management for hugepages setting 
 ###############################################################################
 #!/bin/bash
 
@@ -629,6 +631,8 @@ do
   ssh ${show_name} /usr/sbin/useradd -G dba,asmdba,asmadmin -g oinstall -p oracle -s /bin/bash -u ${grid_number} grid
   ssh ${show_name} echo "grid:oracle|/usr/sbin/chpasswd"
   echo "grid user added on ${show_name} with uid ${grid_number}. Password is oracle."
+  ssh ${show_name} "echo password | passwd grid --stdin"
+  ssh ${show_name} "echo password | passwd oracle --stdin"
   
   if [[ ! -d /opt/oracle ]]
   then
@@ -646,6 +650,67 @@ do
   ssh ${show_name} /bin/chown oracle:oinstall /home/oracle/.bash_profile
   scp ${grid_profile} ${show_name}:/home/grid/.bash_profile
   ssh ${show_name} /bin/chown grid:oinstall /home/grid/.bash_profile
+done
+
+
+###############################################################
+# sysctl.conf upadte for the gid allowing the hugepages access
+###############################################################
+
+if [ ${oinstall_number} != 501 ]
+then
+  echo "################################################"
+  echo " Change gid for hugepages access."
+  echo
+ 
+  read -r N1 N2 N3 N4 N5 N6 N7 N8 N9 N10 N11 N12 < $file_nname
+
+  for ((i=1; i<=node_number; i++))
+  do
+    show_name="N${i}"
+    eval show_name=\$$show_name
+    ssh ${show_name} "sed -i -e 's@vm.hugetlb_shm_group = 501@vm.hugetlb_shm_group = ${oinstall_number}@' /etc/sysctl.conf"
+    ssh ${show_name} sysctl -p
+  done
+fi
+
+
+###############################################################
+# Update /etc/profile with limit values 
+###############################################################
+
+echo
+echo "################################################"
+echo " RSFO will now update the /etc/profile file"
+echo
+
+read -r N1 N2 N3 N4 N5 N6 N7 N8 N9 N10 N11 N12 < $file_nname
+
+for ((i=1; i<=node_number; i++))
+do
+  show_name="N${i}"
+  eval show_name=\$$show_name
+  ssh ${show_name} "echo ' ' >> /etc/profile"
+  ssh ${show_name} "echo '# Grid Requirements' >> /etc/profile"
+  ssh ${show_name} "echo 'if [ $USER = \"grid\" ]; then' >> /etc/profile"
+  ssh ${show_name} "echo ' if [ $SHELL = \"/bin/ksh\" ]; then' >> /etc/profile"
+  ssh ${show_name} "echo '  ulimit -p 16384' >> /etc/profile"
+  ssh ${show_name} "echo '  ulimit -n 65536' >> /etc/profile"
+  ssh ${show_name} "echo ' else' >> /etc/profile"
+  ssh ${show_name} "echo '  ulimit -u 16384 -n 65536' >> /etc/profile"
+  ssh ${show_name} "echo ' fi' >> /etc/profile"
+  ssh ${show_name} "echo 'fi' >> /etc/profile"
+  ssh ${show_name} "echo ' ' >> /etc/profile"
+  ssh ${show_name} "echo ' ' >> /etc/profile"
+  ssh ${show_name} "echo '# Oracle Requirements' >> /etc/profile"
+  ssh ${show_name} "echo 'if [ $USER = \"oracle\" ]; then' >> /etc/profile"
+  ssh ${show_name} "echo ' if [ $SHELL = \"/bin/ksh\" ]; then' >> /etc/profile"
+  ssh ${show_name} "echo '  ulimit -p 16384' >> /etc/profile"
+  ssh ${show_name} "echo '  ulimit -n 65536' >> /etc/profile"
+  ssh ${show_name} "echo ' else' >> /etc/profile"
+  ssh ${show_name} "echo '  ulimit -u 16384 -n 65536' >> /etc/profile"
+  ssh ${show_name} "echo ' fi' >> /etc/profile"
+  ssh ${show_name} "echo 'fi' >> /etc/profile"
 done
 
 

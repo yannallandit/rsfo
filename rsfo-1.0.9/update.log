@@ -24,4 +24,8 @@
 #  04/06/16     20160406  Yann Allandit     Added support for RHEL/CentOS 6.x
 #  04/06/16     20160406  Yann Allandit     Added smart kernel shm setting
 #  04/06/16     20160406  Yann Allandit     Added ssh connection for the grid user
+#  04/12/16     20160406  Yann Allandit     Added "password" as default pwd for oracle and grid users
+#  04/27/16     20160406  Yann Allandit     Update pam.d for Oracle, add hugepages setting for the database
+#  04/27/16     20160406  Yann Allandit     Disable transparent hugepages
+#  04/27/16     20160406  Yann Allandit     Update /etc/profile with limit values
 
