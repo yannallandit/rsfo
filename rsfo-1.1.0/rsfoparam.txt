@@ -1,0 +1,10 @@
+# Silent parameter need to be set to Y for running RSFO in silent mode 
+SILENT=N
+
+# Grid_Base is the base location for the Oracle grid infrastructure
+# The path has to be written WITHOUT / at the end
+GRID_BASE=/u01/app/grid
+
+# Ora_Base is the base location for the Oracle database home
+# The path has to be written WITHOUT / at the end
+ORA_BASE=/u02/app/oracle

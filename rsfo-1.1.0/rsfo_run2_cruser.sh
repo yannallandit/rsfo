@@ -30,6 +30,9 @@
 #  16/03/07  Yann Allandit     Include the grid user creation
 #  16/04/06  Yann Allandit     Add ssh setup for the grid user
 #  16/04/12  Yann Allandit     Define "password" as default pwd for oracle & grid users
+#  16/04/27  Yann Allandit     gid management for hugepages setting 
+#  16/05/02  Yann Allandit     Change ORACLE_HOME location question 
+#  16/05/04  Yann Allandit     Add silent installation capability
 ###############################################################################
 #!/bin/bash
 
@@ -79,6 +82,7 @@ rsh_trace=""           # Tag file for uninstall
 input_nodes=Y	       # Boolean for input node list
 nb_eth=0	       # Define the number of ethernet port on the system
 ipaddr=0	       # Store temporarely an ip address for .rhost definition	
+SilentInstall=N         # Boolean for defining the installation mode
 
 
 
@@ -125,123 +129,58 @@ grid_profile=./grid_profile
 
 
 ###########################################
-# Define the number of nodes in the cluster
+# Control if the installation will be silent or interactive
 ###########################################
-
-################ Check if a list of node file already exist ##############
-if [ -f $file_nname ]
+SilentInstall=N
+if [[ -f /tmp/scripts/rsfoparam.txt ]]
 then
-  node_number=`more ${file_nname}|wc|awk '{print $2}'`
-  echo "There is ""${node_number}"" nodes in this cluster"
-  read -r N1 N2 N3 N4 N5 N6 N7 N8 N9 N10 N11 N12 < $file_nname
+  if [[ -f /tmp/scripts/nod_list.txt ]]
+  then
+    var=`grep SILENT /tmp/scripts/rsfoparam.txt|cut -c8-`
+    if [ "X${var}" = "XY" ]
+    then
+      SilentInstall=Y
+      node_number=`cat /tmp/scripts/nod_list.txt|wc|awk '{print $2}'`
+    fi
+  fi
+fi
 
-  for ((i=1; i<=node_number; i++))
-  do
-    show_name="N${i}"
-    eval show_name=\$$show_name
-    echo "Private node ${i} name is ${show_name}"
-  done
-
-  echo
-  echo "Is this list correct (Y/N)?"
-  read name_check
-  while [ "X${name_check}" != "XN" ] && [ "X${name_check}" != "XY" ]
-  do
-    echo "The answer can only be Y or N"
-    echo "Is this list correct (Y/N)?"
-    read name_check
-  done
-
-  if [ "X${name_check}" = "XY" ]
-  then 
-    input_nodes=N
-  else
-    : > ${file_nname}
+if [ "X${SilentInstall}" = "XY" ]
+then
+  GBLength=`grep GRID_BASE /tmp/scripts/rsfoparam.txt|cut -c11-`
+  OBLength=`grep ORA_BASE /tmp/scripts/rsfoparam.txt|cut -c10-`
+  if [ ${#GBLength} = 0 ] || [ ${#OBLength} = 0 ]
+  then
+    echo "ORA_BASE or GRID_BASE not correctly set"
+    echo "check your parameter file"
+    echo "can't continue"
+    exit 1
   fi
 fi
 
 
-if [ "X${input_nodes}" != "XN" ]
+###########################################
+# Define the number of nodes in the cluster
+###########################################
+
+################ Check if a list of node file already exist ##############
+if [ "X${SilentInstall}" = "XN" ]
 then
-  echo
-  echo "######################################################################"
-  echo " The script will ask you to define the number of nodes in the cluster"
-  echo
-
-  echo "Enter the number of nodes in your cluster (min 1, max 12):"
-  read node_number
-
-  while [ -z $node_number ]
-  do 
-    echo "The number can't be null"
-    echo "Enter the number of nodes:"
-    read node_number
-  done
-
-  while (($node_number<1)) || (($node_number>12))
-  do
-    echo "The number need to be 0<n<13"
-    echo "Enter the number of nodes:"
-    read node_number
-  
-    while [ -z $node_number ]
-    do
-      echo "The number can't be null"
-      echo "Enter the number of nodes:"
-      read node_number
-    done
-  done
-fi
-
-
-##########################################
-# Register name of each node
-##########################################
-
-if [ "X${input_nodes}" != "XN" ]
-then
-  echo
-  echo "#############################################################"
-  echo " You will now enter the private name of the cluster nodes"
-  echo " The private name is the name linked to the interconnect port"
-  echo
-
-  while [ ${name_input} == "N" ]
-  do
-    for ((i=1; i<=node_number; i++))
-    do
-      if [ $i = 1 ]
-      then
-        : > $file_nname
-      fi
-    
-      node_name=""
-      while [ -z $node_name ]
-      do
-        echo "Enter the private node name of the node Number $i:"
-        read node_name
-        if [ -n $node_name ]
-        then
-          list_node=`head -1 $file_nname`
-          list_node=`echo "${list_node} ${node_name}"`
-          echo $list_node>$file_nname
-        else
-          echo "Node name cant be null"
-        fi
-      done
-    done
-
-# Check node name
+  if [ -f $file_nname ]
+  then
+    node_number=`more ${file_nname}|wc|awk '{print $2}'`
+    echo "There is ""${node_number}"" nodes in this cluster"
     read -r N1 N2 N3 N4 N5 N6 N7 N8 N9 N10 N11 N12 < $file_nname
 
     for ((i=1; i<=node_number; i++))
     do
-      show_name="N${i}" 
+      show_name="N${i}"
       eval show_name=\$$show_name
-      echo " Node number $i name is $show_name"
+      echo "Private node ${i} name is ${show_name}"
     done
 
-    echo "Is this list correct (Y/N)?" 
+    echo
+    echo "Is this list correct (Y/N)?"
     read name_check
     while [ "X${name_check}" != "XN" ] && [ "X${name_check}" != "XY" ]
     do
@@ -249,10 +188,110 @@ then
       echo "Is this list correct (Y/N)?"
       read name_check
     done
-    name_input=${name_check}
-  done
+
+    if [ "X${name_check}" = "XY" ]
+    then 
+      input_nodes=N
+    else
+      : > ${file_nname}
+    fi
+  fi
+
+
+  if [ "X${input_nodes}" != "XN" ]
+  then
+    echo
+    echo "######################################################################"
+    echo " The script will ask you to define the number of nodes in the cluster"
+    echo
+
+    echo "Enter the number of nodes in your cluster (min 1, max 12):"
+    read node_number
+
+    while [ -z $node_number ]
+    do 
+      echo "The number can't be null"
+      echo "Enter the number of nodes:"
+      read node_number
+    done
+
+    while (($node_number<1)) || (($node_number>12))
+    do
+      echo "The number need to be 0<n<13"
+      echo "Enter the number of nodes:"
+      read node_number
+  
+      while [ -z $node_number ]
+      do
+        echo "The number can't be null"
+        echo "Enter the number of nodes:"
+        read node_number
+      done
+    done
+  fi
 fi
 
+
+##########################################
+# Register name of each node
+##########################################
+if [ "X${SilentInstall}" = "XN" ]
+then
+  if [ "X${input_nodes}" != "XN" ]
+  then
+    echo
+    echo "#############################################################"
+    echo " You will now enter the private name of the cluster nodes"
+    echo " The private name is the name linked to the interconnect port"
+    echo
+
+    while [ ${name_input} == "N" ]
+    do
+      for ((i=1; i<=node_number; i++))
+      do
+        if [ $i = 1 ]
+        then
+          : > $file_nname
+        fi
+    
+        node_name=""
+        while [ -z $node_name ]
+        do
+          echo "Enter the private node name of the node Number $i:"
+          read node_name
+          if [ -n $node_name ]
+          then
+            list_node=`head -1 $file_nname`
+            list_node=`echo "${list_node} ${node_name}"`
+            echo $list_node>$file_nname
+          else
+            echo "Node name cant be null"
+          fi
+        done
+      done
+
+# Check node name
+      read -r N1 N2 N3 N4 N5 N6 N7 N8 N9 N10 N11 N12 < $file_nname
+
+      for ((i=1; i<=node_number; i++))
+      do
+        show_name="N${i}" 
+        eval show_name=\$$show_name
+        echo " Node number $i name is $show_name"
+      done
+
+      echo "Is this list correct (Y/N)?" 
+      read name_check
+      while [ "X${name_check}" != "XN" ] && [ "X${name_check}" != "XY" ]
+      do
+        echo "The answer can only be Y or N"
+        echo "Is this list correct (Y/N)?"
+        read name_check
+      done
+      name_input=${name_check}
+    done
+  fi
+fi
 
 #################################################
 # Check if ssh works
@@ -499,58 +538,69 @@ done
 
 OORABASE=`grep ORACLE_BASE= $ora_profile`
 
-echo "Database \$ORACLE_BASE is ${OORABASE}"
-echo "Do you want to change it (Y/N)?"
-read obase_check
-while [ "X${obase_check}" != "XN" ] && [ "X${obase_check}" != "XY" ]
-do
-  echo "The answer can only be Y or N"
-  echo "Is this list correct (Y/N)?"
-  read obase_check
-done
-
-
-obase_input=N
-
-if [ "X${obase_check}" == "XY" ]
+if [ "X${SilentInstall}" = "XN" ]
 then
-  while [ ${obase_input} == "N" ]
+  echo "Database \$ORACLE_BASE is ${OORABASE}"
+  echo "Do you want to keep it like this (Y/N)?"
+  read obase_check
+  while [ "X${obase_check}" != "XN" ] && [ "X${obase_check}" != "XY" ]
   do
-    NORABASE=""
-    while [ -z $NORABASE ]
+    echo "The answer can only be Y or N"
+    echo "Is this list correct (Y/N)?"
+    read obase_check
+  done
+
+
+  obase_input=N
+
+  if [ "X${obase_check}" == "XN" ]
+  then
+    while [ ${obase_input} == "N" ]
     do
-    echo "Enter the new path for the database ORACLE_BASE:"
-    echo "Format is ""/directory_path"" without / at the end"
-    read NORABASE
-    NORABASE2=${NORABASE}
-echo $NORABASE2
+      NORABASE=""
+      while [ -z $NORABASE ]
+      do
+      echo "Enter the new path for the database ORACLE_BASE:"
+      echo "Format is ""/directory_path"" without / at the end"
+      read NORABASE
+      NORABASE2=${NORABASE}
+      echo $NORABASE2
 
-    if [ "X${NORABASE}" != "X" ]
-    then
-      NORABASE="ORACLE_BASE=${NORABASE}"
-      echo " the new database ORACLE_BASE value is $NORABASE"
-      echo "Is it correct (Y/N)?"
-      read obase_check
-        while [ "X${obase_check}" != "XN" ] && [ "X${obase_check}" != "XY" ]
-        do
-          echo "The answer can only be Y or N"
-          echo "Is this list correct (Y/N)?"
-          read obase_check
-        done
-      if [ "X${obase_check}" = "XY" ]
+      if [ "X${NORABASE}" != "X" ]
       then
-        obase_input=Y
+        NORABASE="ORACLE_BASE=${NORABASE}"
+        echo " the new database ORACLE_BASE value is $NORABASE"
+        echo "Is it correct (Y/N)?"
+        read obase_check
+          while [ "X${obase_check}" != "XN" ] && [ "X${obase_check}" != "XY" ]
+          do
+            echo "The answer can only be Y or N"
+            echo "Is this list correct (Y/N)?"
+            read obase_check
+          done
+        if [ "X${obase_check}" = "XY" ]
+        then
+          obase_input=Y
+        fi
       fi
-    fi
-  done
-  done
+    done
+    done
 
+    OORABASE=`echo ${OORABASE}|sed -e 's/\//\\\\\//g'`
+    NORABASE=`echo ${NORABASE}|sed -e 's/\//\\\\\//g'`
+    var="perl -pi -e ""s/${OORABASE}/${NORABASE}/"" ${ora_profile}"
+    $var
+  else
+    NORABASE2=`echo ${OORABASE}|sed -e "s/ORACLE_BASE=//"`
+  fi
+else
   OORABASE=`echo ${OORABASE}|sed -e 's/\//\\\\\//g'`
+  NORABASE=`grep ORA_BASE /tmp/scripts/rsfoparam.txt|cut -c10-`
+  NORABASE2=`grep ORA_BASE /tmp/scripts/rsfoparam.txt|cut -c10-`
+  NORABASE="ORACLE_BASE=${NORABASE}"
   NORABASE=`echo ${NORABASE}|sed -e 's/\//\\\\\//g'`
   var="perl -pi -e ""s/${OORABASE}/${NORABASE}/"" ${ora_profile}"
   $var
-else
-  NORABASE2=`echo ${OORABASE}|sed -e "s/ORACLE_BASE=//"`
 fi
 
 
@@ -558,58 +608,70 @@ fi
 
 OGRIDBASE=`grep ORACLE_BASE= $grid_profile`
 
-echo "Grid \$ORACLE_BASE is ${OGRIDBASE}"
-echo "Do you want to change it (Y/N)?"
-read obase_check
-while [ "X${obase_check}" != "XN" ] && [ "X${obase_check}" != "XY" ]
-do
-  echo "The answer can only be Y or N"
-  echo "Is this list correct (Y/N)?"
-  read obase_check
-done
-
-obase_input=N
-
-if [ "X${obase_check}" == "XY" ]
+if [ "X${SilentInstall}" = "XN" ]
 then
-  while [ ${obase_input} == "N" ]
+  echo "Grid \$ORACLE_BASE is ${OGRIDBASE}"
+  echo "Do you want to keep it like this (Y/N)?"
+  read obase_check
+  while [ "X${obase_check}" != "XN" ] && [ "X${obase_check}" != "XY" ]
   do
-    NGRIDBASE=""
-    while [ -z $NGRIDBASE ]
+    echo "The answer can only be Y or N"
+    echo "Is this list correct (Y/N)?"
+    read obase_check
+  done
+
+  obase_input=N
+
+  if [ "X${obase_check}" == "XN" ]
+  then
+    while [ ${obase_input} == "N" ]
     do
-    echo "Enter the new path for the grid ORACLE_BASE:"
-    echo "Format is ""/directory_path"" without / at the end"
-    read NGRIDBASE
-    NGRIDBASE2=${NGRIDBASE}
-echo $NGRIDBASE2
+      NGRIDBASE=""
+      while [ -z $NGRIDBASE ]
+      do
+      echo "Enter the new path for the grid ORACLE_BASE:"
+      echo "Format is ""/directory_path"" without / at the end"
+      read NGRIDBASE
+      NGRIDBASE2=${NGRIDBASE}
+  echo $NGRIDBASE2
 
-    if [ "X${NGRIDBASE}" != "X" ]
-    then
-      NGRIDBASE="ORACLE_BASE=${NGRIDBASE}"
-      echo " the new Grid ORACLE_BASE value is $NGRIDBASE"
-      echo "Is it correct (Y/N)?"
-      read obase_check
-        while [ "X${obase_check}" != "XN" ] && [ "X${obase_check}" != "XY" ]
-        do
-          echo "The answer can only be Y or N"
-          echo "Is this list correct (Y/N)?"
-          read obase_check
-        done
-      if [ "X${obase_check}" = "XY" ]
+      if [ "X${NGRIDBASE}" != "X" ]
       then
-        obase_input=Y
+        NGRIDBASE="ORACLE_BASE=${NGRIDBASE}"
+        echo " the new Grid ORACLE_BASE value is $NGRIDBASE"
+        echo "Is it correct (Y/N)?"
+        read obase_check
+          while [ "X${obase_check}" != "XN" ] && [ "X${obase_check}" != "XY" ]
+          do
+            echo "The answer can only be Y or N"
+            echo "Is this list correct (Y/N)?"
+            read obase_check
+          done
+        if [ "X${obase_check}" = "XY" ]
+        then
+          obase_input=Y
+        fi
       fi
-    fi
-  done
-  done
+    done
+    done
 
+    OGRIDBASE=`echo ${OGRIDBASE}|sed -e 's/\//\\\\\//g'`
+    NGRIDBASE=`echo ${NGRIDBASE}|sed -e 's/\//\\\\\//g'`
+    var="perl -pi -e ""s/${OGRIDBASE}/${NGRIDBASE}/"" ${grid_profile}"
+    $var
+  else
+    NGRIDBASE2=`echo ${OGRIDBASE}|sed -e "s/ORACLE_BASE=//"`
+  fi
+else
   OGRIDBASE=`echo ${OGRIDBASE}|sed -e 's/\//\\\\\//g'`
+  NGRIDBASE=`grep GRID_BASE /tmp/scripts/rsfoparam.txt|cut -c11-`
+  NGRIDBASE2=`grep GRID_BASE /tmp/scripts/rsfoparam.txt|cut -c11-`
+  NGRIDBASE="ORACLE_BASE=${NGRIDBASE}"
   NGRIDBASE=`echo ${NGRIDBASE}|sed -e 's/\//\\\\\//g'`
   var="perl -pi -e ""s/${OGRIDBASE}/${NGRIDBASE}/"" ${grid_profile}"
   $var
-else
-  NGRIDBASE2=`echo ${OGRIDBASE}|sed -e "s/ORACLE_BASE=//"`
 fi
+
 
 ############# Groups and User creation ############
 for ((i=1; i<=node_number; i++))
@@ -653,6 +715,67 @@ done
 
 
 ###############################################################
+# sysctl.conf upadte for the gid allowing the hugepages access
+###############################################################
+
+if [ ${oinstall_number} != 501 ]
+then
+  echo "################################################"
+  echo " Change gid for hugepages access."
+  echo
+ 
+  read -r N1 N2 N3 N4 N5 N6 N7 N8 N9 N10 N11 N12 < $file_nname
+
+  for ((i=1; i<=node_number; i++))
+  do
+    show_name="N${i}"
+    eval show_name=\$$show_name
+    ssh ${show_name} "sed -i -e 's@vm.hugetlb_shm_group = 501@vm.hugetlb_shm_group = ${oinstall_number}@' /etc/sysctl.conf"
+    ssh ${show_name} sysctl -p
+  done
+fi
+
+
+###############################################################
+# Update /etc/profile with limit values 
+###############################################################
+
+echo
+echo "################################################"
+echo " RSFO will now update the /etc/profile file"
+echo
+
+read -r N1 N2 N3 N4 N5 N6 N7 N8 N9 N10 N11 N12 < $file_nname
+
+for ((i=1; i<=node_number; i++))
+do
+  show_name="N${i}"
+  eval show_name=\$$show_name
+  ssh ${show_name} "echo ' ' >> /etc/profile"
+  ssh ${show_name} "echo '# Grid Requirements' >> /etc/profile"
+  ssh ${show_name} "echo 'if [ $USER = \"grid\" ]; then' >> /etc/profile"
+  ssh ${show_name} "echo ' if [ $SHELL = \"/bin/ksh\" ]; then' >> /etc/profile"
+  ssh ${show_name} "echo '  ulimit -p 16384' >> /etc/profile"
+  ssh ${show_name} "echo '  ulimit -n 65536' >> /etc/profile"
+  ssh ${show_name} "echo ' else' >> /etc/profile"
+  ssh ${show_name} "echo '  ulimit -u 16384 -n 65536' >> /etc/profile"
+  ssh ${show_name} "echo ' fi' >> /etc/profile"
+  ssh ${show_name} "echo 'fi' >> /etc/profile"
+  ssh ${show_name} "echo ' ' >> /etc/profile"
+  ssh ${show_name} "echo ' ' >> /etc/profile"
+  ssh ${show_name} "echo '# Oracle Requirements' >> /etc/profile"
+  ssh ${show_name} "echo 'if [ $USER = \"oracle\" ]; then' >> /etc/profile"
+  ssh ${show_name} "echo ' if [ $SHELL = \"/bin/ksh\" ]; then' >> /etc/profile"
+  ssh ${show_name} "echo '  ulimit -p 16384' >> /etc/profile"
+  ssh ${show_name} "echo '  ulimit -n 65536' >> /etc/profile"
+  ssh ${show_name} "echo ' else' >> /etc/profile"
+  ssh ${show_name} "echo '  ulimit -u 16384 -n 65536' >> /etc/profile"
+  ssh ${show_name} "echo ' fi' >> /etc/profile"
+  ssh ${show_name} "echo 'fi' >> /etc/profile"
+done
+
+
+###############################################################
 # ssh setting for the oracle & grid users
 ###############################################################
 
@@ -690,3 +813,12 @@ do
 done
 echo
 
+
+###############################################################
+# deactivate silent installation flag
+###############################################################
+
+if [ "X${SilentInstall}" = "XY" ]
+then
+  sed -i -e "s/SILENT=Y/SILENT=N/g" /tmp/scripts/rsfoparam.txt
+fi

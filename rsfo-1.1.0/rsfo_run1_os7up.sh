@@ -18,6 +18,10 @@
 #  16/03/02  Yann Allandit     Port to RHEL/CentOS 7.x
 #  16/04/06  Yann Allandit     Improved memory kernel setting
 #  16/04/06  Yann Allandit     Added support for RHEL/CentOS 6.x
+#  16/04/27  Yann Allandit     Include hugepages setting
+#  16/04/27  Yann Allandit     Update pam.d 
+#  16/04/27  Yann Allandit     Disable transparent hugepages
+#  16/05/04  Yann Allandit     Add silent installation capability
 ###############################################################################
 #!/bin/bash
 #!/usr/bin/perl
@@ -46,6 +50,8 @@ rhrelease="empty"	# Collect the version of the OS
 SELinuxSet="empty"	# Current setting of SELinux 
 repolist="empty"	# Check if a YUM repository was defined on the system
 OSversion="empty"	# Check the OS version used for this installation
+khugepages=0		# Value for the hugepages setting
+SilentInstall=N		# Boolean for defining the installation mode
 
 
 #############################################
@@ -106,6 +112,9 @@ fi
 # /tmp/scripts/nod_list.txt : Temp file for list of nodes name
 file_nname=/tmp/scripts/nod_list.txt
 
+# /tmp/scripts/rsfoparam.txt : Parameter file for silent installation
+file_param=/tmp/scripts/rsfoparam.txt
+
 # /tmp/scripts/log_rac.txt : log file
 file_log=/tmp/scripts/log_rac.txt
 : > /tmp/scripts/file_log.txt 
@@ -117,123 +126,60 @@ file_rhosts=/tmp/scripts/rhosts.txt
 # /tmp/scripts/packages_added.txt : List of added packages
 file_pack=/tmp/scripts/packages_added.txt
 
+
+###########################################
+# Control if the installation will be silent or interactive
+###########################################
+SilentInstall=N
+if [[ -f /tmp/scripts/rsfoparam.txt ]]
+then
+  if [[ -f /tmp/scripts/nod_list.txt ]]
+  then
+    var=`grep SILENT /tmp/scripts/rsfoparam.txt|cut -c8-`
+    if [ "X${var}" = "XY" ]
+    then
+      SilentInstall=Y
+      node_number=`cat /tmp/scripts/nod_list.txt|wc|awk '{print $2}'`
+    fi
+  fi
+fi
+
+if [ "X${SilentInstall}" = "XY" ]
+then
+  GBLength=`grep GRID_BASE /tmp/scripts/rsfoparam.txt|cut -c11-`
+  OBLength=`grep ORA_BASE /tmp/scripts/rsfoparam.txt|cut -c10-`
+  if [ ${#GBLength} = 0 ] || [ ${#OBLength} = 0 ]
+  then
+    echo "ORA_BASE or GRID_BASE not correctly set"
+    echo "check your parameter file"
+    echo "can't continue"
+    exit 1
+  fi
+fi
+
+
 ###########################################
 # Define the number of nodes in the cluster
 ###########################################
 
 ################ Check if a list of node file already exist ##############
-if [ -f $file_nname ]
+if [ "X${SilentInstall}" = "XN" ]
 then
-  node_number=`more ${file_nname}|wc|awk '{print $2}'`
-  echo "There is ""${node_number}"" nodes in this cluster"
-  read -r N1 N2 N3 N4 N5 N6 N7 N8 N9 N10 N11 N12 < $file_nname
-
-  for ((i=1; i<=node_number; i++))
-  do
-    show_name="N${i}"
-    eval show_name=\$$show_name
-    echo "Private node ${i} name is ${show_name}"
-  done
-
-  echo
-  echo "Is this list correct (Y/N)?"
-  read name_check
-  while [ "X${name_check}" != "XN" ] && [ "X${name_check}" != "XY" ]
-  do
-    echo "The answer can only be Y or N"
-    echo "Is this list correct (Y/N)?"
-    read name_check
-  done
-
-  if [ "X${name_check}" = "XY" ]
+  if [ -f $file_nname ]
   then
-    input_nodes=N
-  else
-    : > ${file_nname}
-  fi
-fi
-
-
-if [ "X${input_nodes}" != "XN" ]
-then
-  echo
-  echo "######################################################################"
-  echo " The script will ask you to define the number of nodes in the cluster"
-  echo
-
-  echo "Enter the number of nodes in your cluster (min 1, max 12):"
-  read node_number
-
-  while [ -z $node_number ]
-  do 
-    echo "The number can't be null"
-    echo "Enter the number of nodes:"
-    read node_number
-  done
-
-  while (($node_number<1)) || (($node_number>12))
-  do
-    echo "The number need to be 0<n<13"
-    echo "Enter the number of nodes:"
-    read node_number
-
-    while [ -z $node_number ]
-    do
-      echo "The number can't be null"
-      echo "Enter the number of nodes:"
-      read node_number
-    done
-  done
-fi
-
-##########################################
-# Register name of each node
-##########################################
-
-if [ "X${input_nodes}" != "XN" ]
-then
-  echo
-  echo "#############################################################"
-  echo " You will now enter the private name of the cluster nodes"
-  echo " The private name is the name linked to the interconnect port"
-  echo
-
-  while [ ${name_input} == "N" ]
-  do
-    for ((i=1; i<=node_number; i++))
-    do
-      if [ $i = 1 ]
-      then
-        : > $file_nname
-      fi
-    
-      node_name=""
-      while [ -z $node_name ]
-      do
-        echo "Enter the private node name of the node Number $i:"
-        read node_name
-        if [ -n $node_name ]
-        then
-          list_node=`head -1 $file_nname`
-          list_node=`echo "${list_node} ${node_name}"`
-          echo $list_node>$file_nname
-        else
-          echo "Node name cant be null"
-        fi
-      done
-    done
-
-# Check node name
+    node_number=`more ${file_nname}|wc|awk '{print $2}'`
+    echo "There is ""${node_number}"" nodes in this cluster"
     read -r N1 N2 N3 N4 N5 N6 N7 N8 N9 N10 N11 N12 < $file_nname
 
     for ((i=1; i<=node_number; i++))
     do
-      show_name="N${i}" 
+      show_name="N${i}"
       eval show_name=\$$show_name
-      echo " Node number $i name is $show_name"
+      echo "Private node ${i} name is ${show_name}"
     done
-  
-    echo "Is this list correct (Y/N)?" 
+
+    echo
+    echo "Is this list correct (Y/N)?"
     read name_check
     while [ "X${name_check}" != "XN" ] && [ "X${name_check}" != "XY" ]
     do
@@ -241,10 +187,109 @@ then
       echo "Is this list correct (Y/N)?"
       read name_check
     done
-    name_input=${name_check}
-  done
+
+    if [ "X${name_check}" = "XY" ]
+    then
+      input_nodes=N
+    else
+      : > ${file_nname}
+    fi
+  fi
+
+  if [ "X${input_nodes}" != "XN" ]
+  then
+    echo
+    echo "######################################################################"
+    echo " The script will ask you to define the number of nodes in the cluster"
+    echo
+
+    echo "Enter the number of nodes in your cluster (min 1, max 12):"
+    read node_number
+
+    while [ -z $node_number ]
+    do 
+      echo "The number can't be null"
+      echo "Enter the number of nodes:"
+      read node_number
+    done
+
+    while (($node_number<1)) || (($node_number>12))
+    do
+      echo "The number need to be 0<n<13"
+      echo "Enter the number of nodes:"
+      read node_number
+
+      while [ -z $node_number ]
+      do
+        echo "The number can't be null"
+        echo "Enter the number of nodes:"
+        read node_number
+      done
+    done
+  fi
 fi
 
+##########################################
+# Register name of each node
+##########################################
+
+if [ "X${SilentInstall}" = "XN" ]
+then
+  if [ "X${input_nodes}" != "XN" ]
+  then
+    echo
+    echo "#############################################################"
+    echo " You will now enter the private name of the cluster nodes"
+    echo " The private name is the name linked to the interconnect port"
+    echo
+
+    while [ ${name_input} == "N" ]
+    do
+      for ((i=1; i<=node_number; i++))
+      do
+        if [ $i = 1 ]
+        then
+          : > $file_nname
+        fi
+    
+        node_name=""
+        while [ -z $node_name ]
+        do
+          echo "Enter the private node name of the node Number $i:"
+          read node_name
+          if [ -n $node_name ]
+          then
+            list_node=`head -1 $file_nname`
+            list_node=`echo "${list_node} ${node_name}"`
+            echo $list_node>$file_nname
+          else
+            echo "Node name cant be null"
+          fi
+        done
+      done
+
+# Check node name
+      read -r N1 N2 N3 N4 N5 N6 N7 N8 N9 N10 N11 N12 < $file_nname
+
+      for ((i=1; i<=node_number; i++))
+      do
+        show_name="N${i}" 
+        eval show_name=\$$show_name
+        echo " Node number $i name is $show_name"
+      done
+    
+      echo "Is this list correct (Y/N)?" 
+      read name_check
+      while [ "X${name_check}" != "XN" ] && [ "X${name_check}" != "XY" ]
+      do
+        echo "The answer can only be Y or N"
+        echo "Is this list correct (Y/N)?"
+        read name_check
+      done
+      name_input=${name_check}
+    done
+  fi
+fi
 
 #################################################
 # Check if ssh works
@@ -327,7 +372,7 @@ do
   ssh ${show_name} cp -f /etc/sysctl.conf /etc/sysctl.conf.RSFO
   ssh ${show_name} "echo \"# Update done by RSFO scripts\">>/etc/sysctl.conf"
 
-  for kparam in "kernel.sem" "kernel.shmall" "kernel.shmmax" "kernel.shmmni" "fs.file-max" "net.ipv4.ip_local_port_range" "net.core.rmem_default" "net.core.wmem_default" "net.core.rmem_max" "net.core.wmem_max" "fs.aio-max-nr" "vm.swappiness" "vm.dirty_background_ratio" "vm.dirty_ratio" "vm.dirty_expire_centisecs" "vm.dirty_writeback_centisecs"
+  for kparam in "kernel.sem" "kernel.shmall" "kernel.shmmax" "kernel.shmmni" "fs.file-max" "net.ipv4.ip_local_port_range" "net.core.rmem_default" "net.core.wmem_default" "net.core.rmem_max" "net.core.wmem_max" "fs.aio-max-nr" "vm.swappiness" "vm.dirty_background_ratio" "vm.dirty_ratio" "vm.dirty_expire_centisecs" "vm.dirty_writeback_centisecs" "vm.nr_hugepages" "vm.hugetlb_shm_group"
   do
     case $kparam in
     kernel.sem)
@@ -336,11 +381,18 @@ do
     kernel.shmall)
       kvalue=`ssh ${show_name} free -k|grep Mem:|awk '{print $2}'`
       kvalue=`expr ${kvalue} / 5 \* 4`
+      khugepages=`expr ${kvalue} / 8`
       ;;
     kernel.shmmax)
       kvalue=`ssh ${show_name} free -b|grep Mem:|awk '{print $2}'`
       kvalue=`expr ${kvalue} / 10 \* 7`
       ;;
+    vm.nr_hugepages)
+      kvalue=${khugepages}
+      ;;
+    vm.hugetlb_shm_group)
+      kvalue=501
+      ;; 
     kernel.shmmni)
       kvalue=4096
       ;;
@@ -415,6 +467,18 @@ done
 
 
 ###########################################################
+# Alter SELinux setting
+###########################################################
+for ((i=1; i<=node_number; i++))
+do
+  show_name="N${i}"
+  eval show_name=\$$show_name
+  ssh ${show_name} "echo 'session    required     pam_limits.so' >> /etc/pam.d/login"
+  echo "pam.d updated on ${show_name}"
+done
+
+
+###########################################################
 # Deactivating the firewall
 ###########################################################
 for ((i=1; i<=node_number; i++))
@@ -424,6 +488,21 @@ do
   ssh ${show_name} systemctl stop firewalld >/dev/null 2>${file_log}
   ssh ${show_name} systemctl disable firewalld >/dev/null 2>${file_log}
   echo "firewalld was stopped & disabled on ${show_name}"
+done
+
+
+###########################################################
+# Deactivating the transparent Hugepages
+###########################################################
+for ((i=1; i<=node_number; i++))
+do
+  show_name="N${i}"
+  eval show_name=\$$show_name
+  ssh ${show_name} "echo never > /sys/kernel/mm/transparent_hugepage/enabled"
+  ssh ${show_name} "echo never > /sys/kernel/mm/transparent_hugepage/defrag"
+  ssh ${show_name} "echo 'echo never > /sys/kernel/mm/transparent_hugepage/enabled' >> /etc/rc.d/rc.local"
+  ssh ${show_name} "echo 'echo never > /sys/kernel/mm/transparent_hugepage/defrag' >> /etc/rc.d/rc.local"
+  ssh ${show_name} "chmod u+x /etc/rc.d/rc.local"
 done
 
 

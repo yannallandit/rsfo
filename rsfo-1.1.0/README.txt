@@ -35,6 +35,15 @@ Installation procedure:
 
 5/ configure manually the shared storage
 
+Silent installation:
+--------------------
+In order to perform an installation without user interaction, you need, before starting the procedure to setup the configuration files as describe below:
+1/ Copy the rsfoparam.txt & the nod_list.txt files in /tmp/scripts/
+
+2/ update the nod_list.txt by adding the list of nodes where rsfo will run. Include the nodes name reachable by ssh without password.
+
+3/ Update the rsfoparam.txt with the accurate parameters.
+
 Scripts:
 --------
 
