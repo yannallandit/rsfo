@@ -136,7 +136,7 @@ if [[ -f /tmp/scripts/rsfoparam.txt ]]
 then
   if [[ -f /tmp/scripts/nod_list.txt ]]
   then
-    var=`grep SILENT /tmp/scripts/rsfoparam.txt|cut -c8-`
+    var=`grep SILENTRSFO /tmp/scripts/rsfoparam.txt|cut -c12-`
     if [ "X${var}" = "XY" ]
     then
       SilentInstall=Y
@@ -821,5 +821,5 @@ echo
 
 if [ "X${SilentInstall}" = "XY" ]
 then
-  sed -i -e "s/SILENT=Y/SILENT=N/g" /tmp/scripts/rsfoparam.txt
+  sed -i -e "s/SILENTRSFO=Y/SILENTRSFO=N/g" /tmp/scripts/rsfoparam.txt
 fi

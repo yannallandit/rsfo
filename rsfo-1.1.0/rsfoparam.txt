@@ -1,12 +1,18 @@
 # Silent parameter need to be set to Y for running RSFO in silent mode 
 # The only valid answers are Y or N
-SILENT=N
+SILENTRSFO=N
+
+# Silent parameter need to be set to Y for running InstallOracle pkg in silent mode 
+# The only valid answers are Y or N
+SILENTIO=N
 
 # Grid_Base is the base location for the Oracle grid infrastructure
+# Used by RSFO
 # The path has to be written WITHOUT / at the end
 GRID_BASE=/u01/app/grid
 
 # Ora_Base is the base location for the Oracle database home
+# Used by RSFO
 # The path has to be written WITHOUT / at the end
 ORA_BASE=/u02/app/oracle
 
@@ -14,3 +20,9 @@ ORA_BASE=/u02/app/oracle
 # Y means a default database will be created by the pkg. N means no db will be created.
 # The only valid answers are Y or N
 DBCREATE=Y
+
+# This parameter is used with the InstallOracle package when run in silent mode
+# The path provided below is the location or the Oracle runInstaller 
+# This is usually a NFS mount point
+# The path has to be written WITHOUT / at the end
+ORAINST_LOC=/kits/oradb
