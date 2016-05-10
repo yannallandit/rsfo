@@ -1,2 +1,0 @@
-tar c -ZPvf RSFO_RH3.tar.gz /opt/hp/RSFO
-tar xvPZf RSFO_RH3.tar

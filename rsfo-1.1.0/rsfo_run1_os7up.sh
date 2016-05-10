@@ -22,6 +22,7 @@
 #  16/04/27  Yann Allandit     Update pam.d 
 #  16/04/27  Yann Allandit     Disable transparent hugepages
 #  16/05/04  Yann Allandit     Add silent installation capability
+#  16/05/10  Yann Allandit     Hugepages and THP setting fixes 
 ###############################################################################
 #!/bin/bash
 #!/usr/bin/perl
@@ -167,7 +168,8 @@ if [ "X${SilentInstall}" = "XN" ]
 then
   if [ -f $file_nname ]
   then
-    node_number=`more ${file_nname}|wc|awk '{print $2}'`
+#    node_number=`more ${file_nname}|wc|awk '{print $2}'`
+    node_number=$(wc -w $file_nname | cut -f 1 -d " ")
     echo "There is ""${node_number}"" nodes in this cluster"
     read -r N1 N2 N3 N4 N5 N6 N7 N8 N9 N10 N11 N12 < $file_nname
 
@@ -381,7 +383,7 @@ do
     kernel.shmall)
       kvalue=`ssh ${show_name} free -k|grep Mem:|awk '{print $2}'`
       kvalue=`expr ${kvalue} / 5 \* 4`
-      khugepages=`expr ${kvalue} / 8`
+      khugepages=`expr ${kvalue} / 8000`
       ;;
     kernel.shmmax)
       kvalue=`ssh ${show_name} free -b|grep Mem:|awk '{print $2}'`
@@ -467,7 +469,7 @@ done
 
 
 ###########################################################
-# Alter SELinux setting
+# Add Oracle pam.d required setting
 ###########################################################
 for ((i=1; i<=node_number; i++))
 do
@@ -498,11 +500,20 @@ for ((i=1; i<=node_number; i++))
 do
   show_name="N${i}"
   eval show_name=\$$show_name
-  ssh ${show_name} "echo never > /sys/kernel/mm/transparent_hugepage/enabled"
-  ssh ${show_name} "echo never > /sys/kernel/mm/transparent_hugepage/defrag"
-  ssh ${show_name} "echo 'echo never > /sys/kernel/mm/transparent_hugepage/enabled' >> /etc/rc.d/rc.local"
-  ssh ${show_name} "echo 'echo never > /sys/kernel/mm/transparent_hugepage/defrag' >> /etc/rc.d/rc.local"
-  ssh ${show_name} "chmod u+x /etc/rc.d/rc.local"
+  ssh ${show_name} "grep ^GRUB_CMDLINE_LINUX /etc/sysconfig/grub > /tmp/scripts/thp.txt" >/dev/null 2>${file_log}
+  ssh ${show_name} "cp /etc/sysconfig/grub /etc/sysconfig/grub.rsfo" >/dev/null 2>${file_log}
+  ssh ${show_name} "sed -i -e 's/GRUB_CMDLINE_LINUX/#GRUB_CMDLINE_LINUX/g' /etc/sysconfig/grub" >/dev/null 2>${file_log}
+  ssh ${show_name} "sed -i -e 's/\ *$//' /tmp/scripts/thp.txt" >/dev/null 2>${file_log}
+  ssh ${show_name} "sed -i -e '$ s/.$//' /tmp/scripts/thp.txt" >/dev/null 2>${file_log}
+  ssh ${show_name} "sed -i -e 's/$/ transparent_hugepage=never\"/' /tmp/scripts/thp.txt" >/dev/null 2>${file_log}
+  ssh ${show_name} "cat /tmp/scripts/thp.txt >> /etc/sysconfig/grub" >/dev/null 2>${file_log}
+  ssh ${show_name} "grub2-mkconfig -o /boot/grub2/grub.cfg" >/dev/null 2>${file_log}
+  ssh ${show_name} "cp -r /usr/lib/tuned/latency-performance /usr/lib/tuned/oracle-rsfo" >/dev/null 2>${file_log}
+  ssh ${show_name} "echo '[vm]' >> /usr/lib/tuned/oracle-rsfo/tuned.conf" >/dev/null 2>${file_log}
+  ssh ${show_name} "echo 'transparent_hugepages=never' >> /usr/lib/tuned/oracle-rsfo/tuned.conf" >/dev/null 2>${file_log}
+  ssh ${show_name} "tuned-adm profile oracle-rsfo" >/dev/null 2>${file_log}
+   echo "Transparent hugepages disabled on ${show_name}"
+   echo "tuned profile optimized for Oracle activated on ${show_name}"
 done
 
 

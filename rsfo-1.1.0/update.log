@@ -29,4 +29,5 @@
 #  04/27/16     20160406  Yann Allandit     Disable transparent hugepages
 #  04/27/16     20160406  Yann Allandit     Update /etc/profile with limit values
 #  05/04/16     20160504  Yann Allandit     Add the silent installation capability
+#  05/10/16     20160504  Yann Allandit     Fix THP and Hugepages setting bug
 

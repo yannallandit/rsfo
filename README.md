@@ -20,6 +20,7 @@ More information in the RSFO_introduction.pdf document.
 ### New in version 1.1.0
 - Silent installation mode
 - Look at the /opt/hpe/rsfo/README.txt for implementation detail
+- Bug fixes with THP and hugepages setting
 
 ### New in version 1.0.9
 - pam.d management for Oracle and Grid
