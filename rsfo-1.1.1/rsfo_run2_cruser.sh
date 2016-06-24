@@ -33,6 +33,8 @@
 #  16/04/27  Yann Allandit     gid management for hugepages setting 
 #  16/05/02  Yann Allandit     Change ORACLE_HOME location question 
 #  16/05/04  Yann Allandit     Add silent installation capability
+#  16/05/23  Yann Allandit     Add oraInventory file location
+#  16/05/23  Yann Allandit     Update Ora_BASE and Ora_HOME location for the grid user
 ###############################################################################
 #!/bin/bash
 
@@ -82,7 +84,8 @@ rsh_trace=""           # Tag file for uninstall
 input_nodes=Y	       # Boolean for input node list
 nb_eth=0	       # Define the number of ethernet port on the system
 ipaddr=0	       # Store temporarely an ip address for .rhost definition	
-SilentInstall=N         # Boolean for defining the installation mode
+SilentInstall=N        # Boolean for defining the installation mode
+IventoryLocation=/     # Location of the Oracle Inventory file	
 
 
 
@@ -674,6 +677,23 @@ else
 fi
 
 
+############# Create oraInventory file ############
+for ((i=1; i<=node_number; i++))
+do
+  show_name="N${i}"
+  eval show_name=\$$show_name
+  if ssh ${show_name} stat /etc/oraInst.loc \> /dev/null 2\>\&1
+  then
+    echo "oraInventory already exists on ${show_name}"
+  else
+    ssh ${show_name} mkdir -p ${NGRIDBASE2}/../oraInventory
+    IventoryLocation=`realpath ${NGRIDBASE2}/../oraInventory`
+    echo "inventory_loc="${IventoryLocation} | ssh ${show_name} "cat > /etc/oraInst.loc" 
+    echo "inst_group=oinstall" | ssh ${show_name} "cat >> /etc/oraInst.loc" 
+    echo "OraInventory created in ${IventoryLocation} on node ${show_name}"
+  fi
+done
+
 ############# Groups and User creation ############
 for ((i=1; i<=node_number; i++))
 do
@@ -704,10 +724,16 @@ do
   fi
 
   ssh ${show_name} /bin/chown oracle:dba /var/opt/oracle
-  ssh ${show_name} /bin/mkdir -p ${NORABASE2}/12c ${NGRIDBASE2}/12c 
+  ssh ${show_name} /bin/mkdir -p ${NORABASE2}/12c ${NGRIDBASE2} ${NGRIDBASE2}/../12c/grid 
+  ssh ${show_name} cp /etc/oraInst.loc ${IventoryLocation}
 
   ssh ${show_name} /bin/chown -R oracle:oinstall ${NORABASE2}
   ssh ${show_name} /bin/chown -R grid:oinstall ${NGRIDBASE2}
+  ssh ${show_name} /bin/chown -R grid:oinstall ${NGRIDBASE2}/../12c
+  ssh ${show_name} /bin/chown -R grid:oinstall ${IventoryLocation}
+  ssh ${show_name} /bin/chown -R grid:oinstall ${IventoryLocation}/*
+  ssh ${show_name} /bin/chmod 775 ${IventoryLocation}
+
   scp ${ora_profile} ${show_name}:/home/oracle/.bash_profile
   ssh ${show_name} /bin/chown oracle:oinstall /home/oracle/.bash_profile
   scp ${grid_profile} ${show_name}:/home/grid/.bash_profile

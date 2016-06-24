@@ -23,6 +23,8 @@
 #  16/04/27  Yann Allandit     Disable transparent hugepages
 #  16/05/04  Yann Allandit     Add silent installation capability
 #  16/05/10  Yann Allandit     Hugepages and THP setting fixes 
+#  16/06/23  Yann Allandit     Update Hugepages and shm setting  
+#  16/06/23  Yann Allandit     Add kernel.sched_wakup_granularity_ns
 ###############################################################################
 #!/bin/bash
 #!/usr/bin/perl
@@ -374,7 +376,7 @@ do
   ssh ${show_name} cp -f /etc/sysctl.conf /etc/sysctl.conf.RSFO
   ssh ${show_name} "echo \"# Update done by RSFO scripts\">>/etc/sysctl.conf"
 
-  for kparam in "kernel.sem" "kernel.shmall" "kernel.shmmax" "kernel.shmmni" "fs.file-max" "net.ipv4.ip_local_port_range" "net.core.rmem_default" "net.core.wmem_default" "net.core.rmem_max" "net.core.wmem_max" "fs.aio-max-nr" "vm.swappiness" "vm.dirty_background_ratio" "vm.dirty_ratio" "vm.dirty_expire_centisecs" "vm.dirty_writeback_centisecs" "vm.nr_hugepages" "vm.hugetlb_shm_group"
+  for kparam in "kernel.sem" "kernel.shmall" "kernel.shmmax" "kernel.shmmni" "fs.file-max" "net.ipv4.ip_local_port_range" "net.core.rmem_default" "net.core.wmem_default" "net.core.rmem_max" "net.core.wmem_max" "fs.aio-max-nr" "vm.swappiness" "vm.dirty_background_ratio" "vm.dirty_ratio" "vm.dirty_expire_centisecs" "vm.dirty_writeback_centisecs" "vm.nr_hugepages" "vm.hugetlb_shm_group" "kernel.sched_wakup_granularity_ns"
   do
     case $kparam in
     kernel.sem)
@@ -382,12 +384,12 @@ do
       ;;
     kernel.shmall)
       kvalue=`ssh ${show_name} free -k|grep Mem:|awk '{print $2}'`
-      kvalue=`expr ${kvalue} / 5 \* 4`
-      khugepages=`expr ${kvalue} / 8000`
+      kvalue=`expr ${kvalue} / 5 `
+      khugepages=`expr ${kvalue} / 500`
       ;;
     kernel.shmmax)
       kvalue=`ssh ${show_name} free -b|grep Mem:|awk '{print $2}'`
-      kvalue=`expr ${kvalue} / 10 \* 7`
+      kvalue=`expr ${kvalue} / 10 \* 8`
       ;;
     vm.nr_hugepages)
       kvalue=${khugepages}
@@ -433,6 +435,9 @@ do
       ;;
     vm.dirty_writeback_centisecs)
       kvalue="100"
+      ;;
+    kernel.sched_wakup_granularity_ns)
+      kvalue="15000000"
       ;;
     esac
    
@@ -561,7 +566,7 @@ then
   do
     show_name="N${i}"
     eval show_name=\$$show_name
-    ssh ${show_name} yum install -y binutils.x86_64 compat-libcap1.x86_64 compat-libstdc++-33.i686 compat-libstdc++-33.x86_64 gcc.x86_64 gcc-c++.x86_64 glibc.i686 glibc.x86_64 glibc-devel.i686 glibc-devel.x86_64 ksh.x86_64 libgcc.i686 libgcc.x86_64 libstdc++.i686 libstdc++.x86_64 libstdc++-devel.i686  libstdc++-devel.x86_64 libaio.i686 libaio.x86_64 libaio-devel.i686 libaio-devel.x86_64 libXext.i686 libXext.x86_64 libXtst.i686 libXtst.x86_64 libX11.i686 libX11.x86_64 libXau.i686 libXau.x86_64 libxcb.i686 libxcb.x86_64 libXi.i686 libXi.x86_64 make.x86_64 sysstat.x86_64 unixODBC-devel.x86_64 unixODBC.x86_64 >/dev/null 2>${file_log}
+    ssh ${show_name} yum install -y binutils.x86_64 compat-libcap1.x86_64 compat-libstdc++-33.i686 compat-libstdc++-33.x86_64 gcc.x86_64 gcc-c++.x86_64 glibc.i686 glibc.x86_64 glibc-devel.i686 glibc-devel.x86_64 ksh.x86_64 libgcc.i686 libgcc.x86_64 libstdc++.i686 libstdc++.x86_64 libstdc++-devel.i686  libstdc++-devel.x86_64 libaio.i686 libaio.x86_64 libaio-devel.i686 libaio-devel.x86_64 libXext.i686 libXext.x86_64 libXtst.i686 libXtst.x86_64 libX11.i686 libX11.x86_64 libXau.i686 libXau.x86_64 libxcb.i686 libxcb.x86_64 libXi.i686 libXi.x86_64 make.x86_64 sysstat.x86_64 unixODBC-devel.x86_64 unixODBC.x86_64 xorg-x11-xauth xorg-x11-utils >/dev/null 2>${file_log}
     echo "Oracle needed packages were installed on ${show_name}"
   done
 

@@ -30,4 +30,6 @@
 #  04/27/16     20160406  Yann Allandit     Update /etc/profile with limit values
 #  05/04/16     20160504  Yann Allandit     Add the silent installation capability
 #  05/10/16     20160504  Yann Allandit     Fix THP and Hugepages setting bug
+#  06/23/16     20160623  Yann Allandit     Add oraInventory location, change $OH and $OB for Grid user 
+#  06/23/16     20160623  Yann Allandit     Change shm and Hugepages setting
 
