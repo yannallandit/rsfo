@@ -13,7 +13,7 @@ export PATH
 
 export ORACLE_HOME ORACLE_BASE
 ORACLE_BASE=/u01/app/grid
-ORACLE_HOME=$ORACLE_BASE/12c
+ORACLE_HOME=$ORACLE_BASE/../12c/grid
 
 PATH=$PATH:/usr/bin/X11:$ORACLE_HOME/bin:.
 PATH=$PATH:/bin:/usr/bin:/usr/sbin:/etc:/opt/bin:/usr/ccs/bin:/usr/local/bin:/usr/openwin/bin:/opt/local/GNU/bin:/opt/local/bin:/opt/NSCPnav/bin:/usr/local/samba/bin:/usr/ucb

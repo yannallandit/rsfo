@@ -32,4 +32,7 @@
 #  05/10/16     20160504  Yann Allandit     Fix THP and Hugepages setting bug
 #  06/23/16     20160623  Yann Allandit     Add oraInventory location, change $OH and $OB for Grid user 
 #  06/23/16     20160623  Yann Allandit     Change shm and Hugepages setting
+#  06/28/16     20160628  Yann Allandit     Improve the firewalld setting   
+#  06/28/16     20160628  Yann Allandit     Recreate the remove RSFO script 
+#  06/29/16     20160629  Yann Allandit     Fix some oraInventory setting issues
 

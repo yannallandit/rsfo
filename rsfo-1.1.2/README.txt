@@ -6,6 +6,7 @@
 
 HP Rapid Setting For Oracle - RSFO -
 ====================================
+Current version 1.1.2
 
 Object:
 --------
@@ -44,6 +45,12 @@ In order to perform an installation without user interaction, you need, before s
 
 3/ Update the rsfoparam.txt with the accurate parameters.
 
+Uninstallation of RSFP:
+-----------------------
+1/ Run rollback_rsfo.sh first in order to remove all the updates made by RSFO. The Oracle and Grid users will be removed or not based on your choice.
+
+2/ run rpm -e rsfo-xxxx in order to remove the package
+
 Scripts:
 --------
 
@@ -51,11 +58,11 @@ Scripts:
 
 2/ rsfo_run1_os7up.sh: Perform the kernel parameter setting, the packages installation if necessary, set the limits, change the compilor release. 
 
-3/ rm_user.sh: Script to use if you want to remove the work done by the nux4rac_pr.sh" and the "Create_user_v2.sh" scripts. This file is not yest validated. Please do not use it with the current version.
+3/ rollback_rsfo.sh: Script to use if you want to remove the work done by the "rsfo_run1_os7up.sh" and the "rsfo_run2_cruser.sh" scripts. This file is not yest validated. 
 
 4/ ora_profile: Template for the .bash_profile of the Oracle user.
 
-5/ ora_profile: Template for the .bash_profile of the Grid user.
+5/ grid_profile: Template for the .bash_profile of the Grid user.
 
 
 Contacts:

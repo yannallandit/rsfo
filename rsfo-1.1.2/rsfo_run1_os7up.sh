@@ -25,6 +25,7 @@
 #  16/05/10  Yann Allandit     Hugepages and THP setting fixes 
 #  16/06/23  Yann Allandit     Update Hugepages and shm setting  
 #  16/06/23  Yann Allandit     Add kernel.sched_wakup_granularity_ns
+#  16/06/28  Yann Allandit     Change Firewalld setting. Allow ports access instead of full disablement
 ###############################################################################
 #!/bin/bash
 #!/usr/bin/perl
@@ -466,6 +467,7 @@ do
   SELinuxSet=`ssh ${show_name} getenforce`
   if [ "X${SELinuxSet}" = "XEnforcing" ]
   then
+    ssh ${show_name} cp -f /etc/selinux/config /etc/selinux/config.RSFO >/dev/null 2>${file_log}
     ssh ${show_name} setenforce 0 >/dev/null 2>${file_log}
     ssh ${show_name} sed -i -e "s/SELINUX=enforcing/SELINUX=permissive/g" /etc/selinux/config >/dev/null 2>${file_log}
     echo "SELinux was set to permissive on ${show_name}"
@@ -480,6 +482,7 @@ for ((i=1; i<=node_number; i++))
 do
   show_name="N${i}"
   eval show_name=\$$show_name
+  ssh ${show_name} cp -f /etc/pam.d/login /etc/pam.d/login.RSFO  >/dev/null 2>${file_log}
   ssh ${show_name} "echo 'session    required     pam_limits.so' >> /etc/pam.d/login"
   echo "pam.d updated on ${show_name}"
 done
@@ -492,9 +495,22 @@ for ((i=1; i<=node_number; i++))
 do
   show_name="N${i}"
   eval show_name=\$$show_name
-  ssh ${show_name} systemctl stop firewalld >/dev/null 2>${file_log}
-  ssh ${show_name} systemctl disable firewalld >/dev/null 2>${file_log}
-  echo "firewalld was stopped & disabled on ${show_name}"
+  fwstate=`ssh ${show_name} firewall-cmd --state`
+  if [ "X${fwstate}" = "Xrunning" ]
+    then
+    ssh ${show_name} "firewall-cmd --permanent --zone=public --add-port=22/tcp" >/dev/null 2>${file_log}
+    ssh ${show_name} "firewall-cmd --permanent --zone=public --add-port=1521/tcp" >/dev/null 2>${file_log}
+    ssh ${show_name} "firewall-cmd --permanent --zone=public --add-port=5500/tcp" >/dev/null 2>${file_log}
+    ssh ${show_name} "firewall-cmd --reload" >/dev/null 2>${file_log}
+    echo "firewalld updated on ${show_name}"
+    ssh ${show_name} "firewall-cmd --permanent --zone=public --list-ports"
+  else
+    echo "firewalld is already disabled on ${show_name}"
+  fi
+
+#  ssh ${show_name} systemctl stop firewalld >/dev/null 2>${file_log}
+#  ssh ${show_name} systemctl disable firewalld >/dev/null 2>${file_log}
+#  echo "firewalld was stopped & disabled on ${show_name}"
 done
 
 
@@ -506,7 +522,7 @@ do
   show_name="N${i}"
   eval show_name=\$$show_name
   ssh ${show_name} "grep ^GRUB_CMDLINE_LINUX /etc/sysconfig/grub > /tmp/scripts/thp.txt" >/dev/null 2>${file_log}
-  ssh ${show_name} "cp /etc/sysconfig/grub /etc/sysconfig/grub.rsfo" >/dev/null 2>${file_log}
+  ssh ${show_name} "cp /etc/sysconfig/grub /etc/sysconfig/grub.RSFO" >/dev/null 2>${file_log}
   ssh ${show_name} "sed -i -e 's/GRUB_CMDLINE_LINUX/#GRUB_CMDLINE_LINUX/g' /etc/sysconfig/grub" >/dev/null 2>${file_log}
   ssh ${show_name} "sed -i -e 's/\ *$//' /tmp/scripts/thp.txt" >/dev/null 2>${file_log}
   ssh ${show_name} "sed -i -e '$ s/.$//' /tmp/scripts/thp.txt" >/dev/null 2>${file_log}
@@ -529,7 +545,7 @@ for ((i=1; i<=node_number; i++))
 do
   show_name="N${i}"
   eval show_name=\$$show_name
-  ssh ${show_name} cp /etc/security/limits.conf /etc/security/limits.conf.rsfo.bkp
+  ssh ${show_name} cp /etc/security/limits.conf /etc/security/limits.conf.RSFO
   limitend=`ssh ${show_name} tail -1 /etc/security/limits.conf`
   if [ "X${limitend}" = "X# End of file" ]
   then

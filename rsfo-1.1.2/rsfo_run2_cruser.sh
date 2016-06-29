@@ -732,7 +732,8 @@ do
   ssh ${show_name} /bin/chown -R grid:oinstall ${NGRIDBASE2}/../12c
   ssh ${show_name} /bin/chown -R grid:oinstall ${IventoryLocation}
   ssh ${show_name} /bin/chown -R grid:oinstall ${IventoryLocation}/*
-  ssh ${show_name} /bin/chmod 775 ${IventoryLocation}
+  ssh ${show_name} /bin/chmod 770 ${IventoryLocation}
+  ssh ${show_name} /bin/chmod 660 ${IventoryLocation}/*
 
   scp ${ora_profile} ${show_name}:/home/oracle/.bash_profile
   ssh ${show_name} /bin/chown oracle:oinstall /home/oracle/.bash_profile
@@ -778,6 +779,7 @@ for ((i=1; i<=node_number; i++))
 do
   show_name="N${i}"
   eval show_name=\$$show_name
+  ssh ${show_name} "cp /etc/profile /etc/profile.RSFO" >/dev/null 2>${file_log}
   ssh ${show_name} "echo ' ' >> /etc/profile"
   ssh ${show_name} "echo '# Grid Requirements' >> /etc/profile"
   ssh ${show_name} "echo 'if [ $USER = \"grid\" ]; then' >> /etc/profile"
