@@ -45,7 +45,7 @@ In order to perform an installation without user interaction, you need, before s
 
 3/ Update the rsfoparam.txt with the accurate parameters.
 
-Uninstallation of RSFP:
+Uninstallation of RSFO:
 -----------------------
 1/ Run rollback_rsfo.sh first in order to remove all the updates made by RSFO. The Oracle and Grid users will be removed or not based on your choice.
 
