@@ -18,7 +18,7 @@ Rapid Setting For Oracle (RAC)
 More information in the RSFO_introduction.pdf document.
 
 ### New in version 1.1.2
-- Remove RSFO script updated. Is clusterware now.
+- The "Remove RSFO" script was updated. It is fully functionnal & clusterware now.
 - Add Oracle firewalld rules (instead of firewall disablement).
 - Fix oraInventory issue
 - rpm -e update
