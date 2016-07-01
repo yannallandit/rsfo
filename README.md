@@ -17,6 +17,10 @@ Rapid Setting For Oracle (RAC)
 
 More information in the RSFO_introduction.pdf document.
 
+### New in version 1.1.3
+- Updated tuned-adm profile
+- Updated information messages broadcast
+
 ### New in version 1.1.2
 - The "Remove RSFO" script was updated. It is fully functionnal & clusterware now.
 - Add Oracle firewalld rules (instead of firewall disablement).
