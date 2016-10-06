@@ -17,6 +17,11 @@ Rapid Setting For Oracle (RAC)
 
 More information in the RSFO_introduction.pdf document.
 
+### New in version 1.1.4
+- Add numa balancing support
+- Add transparent_huepages=none in boot parameters using grubby
+- Change source plan for oracle-rsfo tuned profile
+
 ### New in version 1.1.3
 - Updated tuned-adm profile
 - Updated information messages broadcast
