@@ -17,6 +17,9 @@ Rapid Setting For Oracle (RAC)
 
 More information in the RSFO_introduction.pdf document.
 
+### New in version 1.1.5
+- Fix a silent installation issue (occurs only with the Ansible playbook version)
+
 ### New in version 1.1.4
 - Add numa balancing support
 - Add transparent_huepages=none in boot parameters using grubby
