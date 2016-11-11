@@ -3,6 +3,7 @@
 
 Rapid Setting For Oracle (RAC)
 ------------------------------
+![alt tag](https://github.com/yannallandit/rsfo/Logo2Medium.jpg)
 
 ### How to use RSFO
 
