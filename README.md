@@ -64,3 +64,4 @@ More information in the RSFO_introduction.pdf document.
 - ssh for the grid user
 - A Video tutorial shows the entire process
 
+[![GitHub Download Count](https://img.shields.io/github/downloads/user/repo/total.svg)]() 
