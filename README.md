@@ -17,6 +17,9 @@ Rapid Setting For Oracle (RAC)
 
 More information in the RSFO_introduction.pdf document.
 
+### New in version 1.1.6
+- Change the kernel semaphores setting in order to match scale up server requirements
+
 ### New in version 1.1.5
 - Fix a silent installation issue (occurs only with the Ansible playbook version)
 
