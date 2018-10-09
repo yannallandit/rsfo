@@ -31,6 +31,7 @@
 #  16/10/05  Yann Allandit     Add numa_balancing parameter in sysctl.conf
 #  16/10/05  Yann Allandit     Change base tuned-adm profile
 #  16/10/05  Yann Allandit     Change boot parameters using grubby
+#  18/10/09  Yann Allandit     Change semaphore setting
 ###############################################################################
 #!/bin/bash
 #!/usr/bin/perl
@@ -387,7 +388,16 @@ do
   do
     case $kparam in
     kernel.sem)
-      kvalue="250 32000 100 128"
+      kvalue=`ssh ${show_name} nproc --all`
+      kvalue=`expr ${kvalue} \* 190`
+      if [ ${kvalue} -lt 32000 ]
+      then
+         kvalue="250 32000 100 128"
+      else
+         ksemmns=`expr ${kvalue}`
+         ksemmni=`expr ${kvalue} / 250`
+         kvalue="250 $[ksemmns] 100 $[ksemmni]"
+      fi
       ;;
     kernel.shmall)
       kvalue=`ssh ${show_name} free -k|grep Mem:|awk '{print $2}'`

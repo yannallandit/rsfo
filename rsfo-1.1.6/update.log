@@ -41,3 +41,4 @@
 #  10/04/16     20161004  Yann Allandit     Change base tuned-adm profile
 #  10/04/16     20161004  Yann Allandit     Change THP=none in boot parameters using grubby
 #  11/04/16     20161104  Yann Allandit     Fix HOME location in Oracle and Grid user bash_profile setting (Apply only in the Ansible version)
+#  10/09/18     20161104  Yann Allandit     Tune the kernel semaphore setting in order to match scale up servers requirements 
