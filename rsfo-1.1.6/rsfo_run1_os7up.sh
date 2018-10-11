@@ -32,6 +32,7 @@
 #  16/10/05  Yann Allandit     Change base tuned-adm profile
 #  16/10/05  Yann Allandit     Change boot parameters using grubby
 #  18/10/09  Yann Allandit     Change semaphore setting
+#  18/10/11  Yann Allandit     Fix sched_wakeup parameter typo
 ###############################################################################
 #!/bin/bash
 #!/usr/bin/perl
@@ -453,7 +454,7 @@ do
     vm.dirty_writeback_centisecs)
       kvalue="100"
       ;;
-    kernel.sched_wakup_granularity_ns)
+    kernel.sched_wakeup_granularity_ns)
       kvalue="15000000"
       ;;
     kernel.numa_balancing)
