@@ -33,6 +33,16 @@
 #  16/10/05  Yann Allandit     Change boot parameters using grubby
 #  18/10/09  Yann Allandit     Change semaphore setting
 #  18/10/11  Yann Allandit     Fix sched_wakeup parameter typo
+#  18/11/12  Yann Allandit     Add smartmontools package installation (18c required)
+#  18/11/12  Yann Allandit     Check availability of the server-option-rpms repo
+#  18/11/12  Yann Allandit     Open multiple udp/tcp ports in order to avoid multicast error in CVU
+#  18/11/14  Yann Allandit     Stop and disable avahi-daemon on all nodes
+#  18/11/14  Yann Allandit     Set No zero configuration network
+#  18/11/15  Yann Allandit     Modify Firewall setting 
+#  18/11/30  Yann Allandit     Fix sched_wakeup parameter typo (another time)
+#  18/11/30  Yann Allandit     Reduce from 70% to 60% the amount of RAM in hugepages
+#  18/11/30  Yann Allandit     Add vm.min_free_kbytes in sysctl.conf
+#  18/11/30  Yann Allandit     logind.conf updated with RemoveIPC=no in order to avoind instance crash
 ###############################################################################
 #!/bin/bash
 #!/usr/bin/perl
@@ -64,6 +74,12 @@ OSversion="empty"	# Check the OS version used for this installation
 khugepages=0		# Value for the hugepages setting
 SilentInstall=N		# Boolean for defining the installation mode
 defkernel="empty"	# Select the default boot kernel to be udated
+optrepo=""              # check if the server-optional-rpms repo is available
+optrepostatus=0         # if server-optional-rpms repo is not available, warning boolean
+show_namej="empty"	# Remote node name used during the firewall setting
+hostjip="empty"		# Public IP address used during the firewall setting
+ipNj="empty"		# Private IP address used during the firewall setting
+intNi="empty" 		# Ethernet interface dealing with the interconnect private traffic
 
 
 #############################################
@@ -385,7 +401,7 @@ do
   ssh ${show_name} cp -f /etc/sysctl.conf /etc/sysctl.conf.RSFO
   ssh ${show_name} "echo \"# Update done by RSFO scripts\">>/etc/sysctl.conf"
 
-  for kparam in "kernel.sem" "kernel.shmall" "kernel.shmmax" "kernel.shmmni" "fs.file-max" "net.ipv4.ip_local_port_range" "net.core.rmem_default" "net.core.wmem_default" "net.core.rmem_max" "net.core.wmem_max" "fs.aio-max-nr" "vm.swappiness" "vm.dirty_background_ratio" "vm.dirty_ratio" "vm.dirty_expire_centisecs" "vm.dirty_writeback_centisecs" "vm.nr_hugepages" "vm.hugetlb_shm_group" "kernel.sched_wakup_granularity_ns" "kernel.numa_balancing"
+  for kparam in "kernel.sem" "kernel.shmall" "kernel.shmmax" "kernel.shmmni" "fs.file-max" "net.ipv4.ip_local_port_range" "net.core.rmem_default" "net.core.wmem_default" "net.core.rmem_max" "net.core.wmem_max" "fs.aio-max-nr" "vm.swappiness" "vm.dirty_background_ratio" "vm.dirty_ratio" "vm.dirty_expire_centisecs" "vm.dirty_writeback_centisecs" "vm.nr_hugepages" "vm.hugetlb_shm_group" "kernel.sched_wakeup_granularity_ns" "kernel.numa_balancing" "vm.min_free_kbytes"
   do
     case $kparam in
     kernel.sem)
@@ -402,7 +418,7 @@ do
       ;;
     kernel.shmall)
       kvalue=`ssh ${show_name} free -k|grep Mem:|awk '{print $2}'`
-      kvalue=`expr ${kvalue} / 5 `
+      kvalue=`expr ${kvalue} / 6 `
       khugepages=`expr ${kvalue} / 500`
       ;;
     kernel.shmmax)
@@ -460,6 +476,9 @@ do
     kernel.numa_balancing)
       kvalue="1"
       ;;
+    vm.min_free_kbytes)
+      kvalue="64000"
+      ;;
     esac
    
     kparam_exist=`ssh ${show_name} grep ${kparam} /etc/sysctl.conf|grep -v grep|wc|awk '{print $1}'` 
@@ -474,6 +493,25 @@ do
   done
   ssh ${show_name} "/sbin/sysctl -p" >/dev/null 2>${file_log}
   echo "new kernel parameters were loaded on node ${show_name}"
+done
+
+
+###########################################################
+# Update logind.conf
+###########################################################
+
+echo
+echo "################################################"
+echo "$(tput smul)The script will now alter logind.conf file"
+echo "on all nodes of your cluster.$(tput rmul)"
+echo
+
+for ((i=1; i<=node_number; i++))
+do
+  show_name="N${i}"
+  eval show_name=\$$show_name
+  ssh ${show_name} "echo RemoveIPC=no>>/etc/systemd/logind.conf"
+  echo "RemoveIPC=no was set on ${show_name}"
 done
 
 
@@ -523,7 +561,45 @@ done
 
 
 ###########################################################
-# Deactivating the firewall
+# Set no zero configuration network
+###########################################################
+
+echo
+echo "################################################"
+echo "$(tput smul)The script will now enable the no zero configuration network"
+echo "on all nodes of your cluster.$(tput rmul)"
+echo
+
+for ((i=1; i<=node_number; i++))
+do
+  show_name="N${i}"
+  eval show_name=\$$show_name
+  ssh ${show_name} cp -f /etc/sysconfig/network /etc/sysconfig/network.RSFO  >/dev/null 2>${file_log}
+  ssh ${show_name} "echo 'NOZEROCONF=yes' >> /etc/sysconfig/network"
+  echo "No zero config network enabled on ${show_name}"
+done
+
+###########################################################
+# Stop avahi daemon
+###########################################################
+
+echo
+echo "################################################"
+echo "$(tput smul)The script will now stop the avahi daemon"
+echo "on all nodes of your cluster.$(tput rmul)"
+echo
+
+for ((i=1; i<=node_number; i++))
+do
+  show_name="N${i}"
+  eval show_name=\$$show_name
+  ssh ${show_name} systemctl stop avahi-daemon  >/dev/null 2>${file_log}
+  ssh ${show_name} systemctl disable avahi-daemon  >/dev/null 2>${file_log}
+done
+
+
+###########################################################
+# Setting the firewall rules
 ###########################################################
 
 echo
@@ -542,9 +618,36 @@ do
     ssh ${show_name} "firewall-cmd --permanent --zone=public --add-port=22/tcp" >/dev/null 2>${file_log}
     ssh ${show_name} "firewall-cmd --permanent --zone=public --add-port=1521/tcp" >/dev/null 2>${file_log}
     ssh ${show_name} "firewall-cmd --permanent --zone=public --add-port=5500/tcp" >/dev/null 2>${file_log}
+#    ssh ${show_name} "firewall-cmd --permanent --zone=public --add-port=443/tcp" >/dev/null 2>${file_log}
+#    ssh ${show_name} "firewall-cmd --permanent --zone=public --add-port=42424/udp" >/dev/null 2>${file_log}
+#    ssh ${show_name} "firewall-cmd --permanent --zone=public --add-port=33887/udp" >/dev/null 2>${file_log}
+#    ssh ${show_name} "firewall-cmd --permanent --zone=public --add-port=137/udp" >/dev/null 2>${file_log}
+#    ssh ${show_name} "firewall-cmd --permanent --zone=public --add-port=138/udp" >/dev/null 2>${file_log}
+#    ssh ${show_name} "firewall-cmd --permanent --zone=public --add-port=53/udp" >/dev/null 2>${file_log}
+#    ssh ${show_name} "firewall-cmd --permanent --zone=public --add-port=1630/tcp" >/dev/null 2>${file_log}
+#    ssh ${show_name} "firewall-cmd --permanent --zone=public --add-port=3872/tcp" >/dev/null 2>${file_log}
+#    ssh ${show_name} "firewall-cmd --permanent --zone=public --add-port=5353/tcp" >/dev/null 2>${file_log}
+#    ssh ${show_name} "firewall-cmd --permanent --zone=public --add-port=6100/tcp" >/dev/null 2>${file_log}
+#    ssh ${show_name} "firewall-cmd --permanent --zone=public --add-port=6200/tcp" >/dev/null 2>${file_log}
+
+    for ((j=1; j<=node_number; j++))
+    do
+      show_namej="N${j}"
+      eval show_namej=\$$show_namej
+      if [ $i -ne $j ]
+      then
+        hostjip=`ssh ${show_namej} hostname -i`
+        ssh ${show_name} "firewall-cmd --permanent --zone=trusted --add-source=${hostjip}/21"
+        ipNj=`ssh ${show_namej} getent hosts ${show_namej} | awk '{print $1}'`
+        intNi=`ssh ${show_name} ip route get ${ipNj} |grep ${ipNj} | awk '{print $3}'`
+        ssh ${show_name} firewall-cmd --permanent --zone=trusted --add-interface=${intNi}
+      fi
+    done
+ 
     ssh ${show_name} "firewall-cmd --reload" >/dev/null 2>${file_log}
     ssh ${show_name} "systemctl restart firewalld.service" >/dev/null 2>${file_log}
     echo "firewalld updated on ${show_name}"
+    ssh ${show_name} "firewall-cmd --get-active-zones "
     ssh ${show_name} "firewall-cmd --permanent --zone=public --list-ports"
   else
     echo "firewalld is already disabled on ${show_name}"
@@ -649,7 +752,12 @@ then
   do
     show_name="N${i}"
     eval show_name=\$$show_name
-    ssh ${show_name} yum install -y binutils.x86_64 compat-libcap1.x86_64 compat-libstdc++-33.i686 compat-libstdc++-33.x86_64 gcc.x86_64 gcc-c++.x86_64 glibc.i686 glibc.x86_64 glibc-devel.i686 glibc-devel.x86_64 ksh.x86_64 libgcc.i686 libgcc.x86_64 libstdc++.i686 libstdc++.x86_64 libstdc++-devel.i686  libstdc++-devel.x86_64 libaio.i686 libaio.x86_64 libaio-devel.i686 libaio-devel.x86_64 libXext.i686 libXext.x86_64 libXtst.i686 libXtst.x86_64 libX11.i686 libX11.x86_64 libXau.i686 libXau.x86_64 libxcb.i686 libxcb.x86_64 libXi.i686 libXi.x86_64 make.x86_64 sysstat.x86_64 unixODBC-devel.x86_64 unixODBC.x86_64 xorg-x11-xauth xorg-x11-utils >/dev/null 2>${file_log}
+    optrepo=` ssh rsfotest2 yum repolist | grep server-optional-rpms`
+    if [ "X$optrepo" = "X" ]
+    then
+        optrepostatus=1
+    fi
+    ssh ${show_name} yum install -y binutils.x86_64 compat-libcap1.x86_64 compat-libstdc++-33.i686 compat-libstdc++-33.x86_64 gcc.x86_64 gcc-c++.x86_64 glibc.i686 glibc.x86_64 glibc-devel.i686 glibc-devel.x86_64 ksh.x86_64 libgcc.i686 libgcc.x86_64 libstdc++.i686 libstdc++.x86_64 libstdc++-devel.i686  libstdc++-devel.x86_64 libaio.i686 libaio.x86_64 libaio-devel.i686 libaio-devel.x86_64 libXext.i686 libXext.x86_64 libXtst.i686 libXtst.x86_64 libX11.i686 libX11.x86_64 libXau.i686 libXau.x86_64 libxcb.i686 libxcb.x86_64 libXi.i686 libXi.x86_64 make.x86_64 sysstat.x86_64 unixODBC-devel.x86_64 unixODBC.x86_64 xorg-x11-xauth xorg-x11-utils smartmontools.x86_64 >/dev/null 2>${file_log}
     echo "Oracle needed packages were installed on ${show_name}"
   done
 
@@ -659,13 +767,23 @@ then
   do
     show_name="N${i}"
     eval show_name=\$$show_name
-    ssh ${show_name} yum install -y binutils.x86_64 compat-libcap1.x86_64 compat-libstdc++-33.i686 compat-libstdc++-33.x86_64 gcc.x86_64 gcc-c++.x86_64 glibc.i686 glibc.x86_64 glibc-devel.i686 glibc-devel.x86_64 ksh.x86_64 libgcc.i686 libgcc.x86_64 libstdc++.i686 libstdc++.x86_64 libstdc++-devel.i686  libstdc++-devel.x86_64 libaio.x86_64 libaio-devel.x86_64 libXext.x86_64 libXtst.x86_64 libX11.x86_64 libXau.x86_64 libxcb.x86_64 libXi.x86_64 make.x86_64 sysstat.x86_64 unixODBC-devel.x86_64 unixODBC.x86_64 glibc-devel.x86_64 cpp.x86_64 glibc-headers.x86_64 kernel-headers.x86_64 mpfr.x86_64 redhat-release-server.x86_64 cloog-ppl.x86_64 libstdc++.x86_64 libstdc++-devel.x86_64 ppl.x86_64 >/dev/null 2>${file_log}
+    ssh ${show_name} yum install -y binutils.x86_64 compat-libcap1.x86_64 compat-libstdc++-33.i686 compat-libstdc++-33.x86_64 gcc.x86_64 gcc-c++.x86_64 glibc.i686 glibc.x86_64 glibc-devel.i686 glibc-devel.x86_64 ksh.x86_64 libgcc.i686 libgcc.x86_64 libstdc++.i686 libstdc++.x86_64 libstdc++-devel.i686  libstdc++-devel.x86_64 libaio.x86_64 libaio-devel.x86_64 libXext.x86_64 libXtst.x86_64 libX11.x86_64 libXau.x86_64 libxcb.x86_64 libXi.x86_64 make.x86_64 sysstat.x86_64 unixODBC-devel.x86_64 unixODBC.x86_64 glibc-devel.x86_64 cpp.x86_64 glibc-headers.x86_64 kernel-headers.x86_64 mpfr.x86_64 redhat-release-server.x86_64 cloog-ppl.x86_64 libstdc++.x86_64 libstdc++-devel.x86_64 ppl.x86_64 smartmontools.x86_64 >/dev/null 2>${file_log}
     echo "Oracle needed packages were installed on ${show_name}"
   done
 fi
 
+if [ "$optrepostatus" -eq 1 ]
+then
+    echo ""
+    echo "        =================================================== "
+    echo "it seems the yum repository for the server-option was not enabled on some of the nodes"
+    echo "please check if compat-libstdc++ rpm was installed"
+    echo "        =================================================== "
+    echo ""
+fi
+
 echo ""
-echo "########################################################"
-echo "$(tput rev)Script completed, don'tforget to run rsfo_run2_cruser.sh$(tput sgr 0)"
-echo "########################################################"
+echo "#########################################################"
+echo "$(tput rev)Script completed, don't forget to run rsfo_run2_cruser.sh$(tput sgr 0)"
+echo "#########################################################"
 echo ""

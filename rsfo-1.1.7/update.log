@@ -42,4 +42,11 @@
 #  10/04/16     20161004  Yann Allandit     Change THP=none in boot parameters using grubby
 #  11/04/16     20161104  Yann Allandit     Fix HOME location in Oracle and Grid user bash_profile setting (Apply only in the Ansible version)
 #  10/09/18     20180910  Yann Allandit     Tune the kernel semaphore setting in order to match scale up servers requirements 
-#  10/11/18     20181109  Yann Allandit     Fix sched_wakeup_granularity_ns typo
+#  10/10/18     20181018  Yann Allandit     Fix sched_wakeup_granularity_ns typo
+#  12/11/18     20181112  Yann Allandit     Add smartmontools package installation (required in 18c)
+#  12/11/18     20181112  Yann Allandit     Open multiple udp/tcp ports in order to avoid "multicast error" in CVU
+#  12/11/18     20181112  Yann Allandit     Check availability of the server-option-rpms repository
+#  14/11/18     20181114  Yann Allandit     Stop and disable avahi-daemon & No Zero config network
+#  15/11/18     20181115  Yann Allandit     Update the security firewall setting
+#  22/11/18     20181122  Yann Allandit     Change the ORACLE_HOME value for the GRID user
+#  30/11/18     20181130  Yann Allandit     Reduce the amount of hugepages and fix sched_wakeup parameter typo and set vm.min_free_kbytes and RemoveIPC=no in /etc/systemd/logind.conf

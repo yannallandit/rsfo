@@ -17,6 +17,18 @@ Rapid Setting For Oracle (RAC)
 
 More information in the RSFO_introduction.pdf document.
 
+### New in version 1.1.7
+- Version validated with Oracle 18c RAC
+- Add smartmontools package
+- Change firewall setting
+- Check availability of the server-option-rpms yum repo
+- Stop and disable avahi-daemon
+- Set no zero config network
+- Change value for GRID $OH
+- Reduce hugepages from 70 to 60% of the RAM
+- Fix sched_wakeup parameter typo and add vm.min_free_kbytes in sysctl.conf
+- Add RemoveIPC=no in /etc/systemd/logind.conf
+
 ### New in version 1.1.6
 - Change the kernel semaphores setting in order to match scale up server requirements
 - Fix sched_wakeup_granularity_ns typo

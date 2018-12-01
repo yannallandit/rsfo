@@ -37,6 +37,7 @@
 #  16/05/23  Yann Allandit     Update Ora_BASE and Ora_HOME location for the grid user
 #  16/07/01  Yann Allandit     Update Information messages visibility
 #  16/11/04  Yann Allandit     Fix Silent install issue (Ansible version only)
+#  18/11/22  Yann Allandit     Update $ORACLE_HOME setup for GRID user (remove ..)
 ###############################################################################
 #!/bin/bash
 
@@ -88,7 +89,7 @@ nb_eth=0	       # Define the number of ethernet port on the system
 ipaddr=0	       # Store temporarely an ip address for .rhost definition	
 SilentInstall=N        # Boolean for defining the installation mode
 IventoryLocation=/     # Location of the Oracle Inventory file	
-
+OH=empty	       # New ORACLE_HOME location for the grid user	
 
 
 #############################################
@@ -847,6 +848,32 @@ do
   ssh ${show_name} cp -R /root/.ssh /home/grid/.ssh
   ssh ${show_name} chown -R grid:oinstall /home/grid/.ssh
   echo "ssh enabled for grid on ${show_name}"
+done
+echo
+
+
+###############################################################
+# Update GRID User $ORACLE_HOME
+###############################################################
+
+echo
+echo "################################################"
+echo "$(tput smul)The script will now update the ORACLE_HOME variable for the grid user"
+echo "on all nodes of your cluster.$(tput rmul)"
+echo
+
+read -r N1 N2 N3 N4 N5 N6 N7 N8 N9 N10 N11 N12 < $file_nname
+
+for ((i=1; i<=node_number; i++))
+do
+  show_name="N${i}"
+  eval show_name=\$$show_name
+  OH=`ssh ${show_name} cat /home/grid/.bash_profile | grep ORACLE_HOME= | grep -v grep`
+  OH=`echo ${OH:12}`
+  OH=`ssh ${show_name} ". /home/grid/.bash_profile;cd ${OH};pwd"`  
+  ssh ${show_name} sed -i "s/ORACLE_HOME=/#ORACLE_HOME=/g" /home/grid/.bash_profile
+  ssh ${show_name} sed -i "16i\ORACLE_HOME=${OH}" /home/grid/.bash_profile
+  echo "GRID ORACLE_HOME updated on ${show_name}"
 done
 echo
 
